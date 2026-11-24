@@ -48,6 +48,9 @@ button:active{transform:scale(.96)}
 @keyframes cdPop{0%{transform:scale(2.1);opacity:0}35%{transform:scale(1);opacity:1}100%{transform:scale(.94);opacity:1}}
 #wordBanner{top:15%;left:0;right:0;text-align:center;font-size:46px;font-weight:900;letter-spacing:1px;opacity:0;z-index:5}
 #wordBanner.show{animation:wordPop 1s ease-out forwards}
+#glanceTag{top:calc(15% + 58px);left:0;right:0;text-align:center;z-index:5;opacity:0}
+#glanceTag span{display:inline-block;background:#4a3205e6;border:1.5px solid var(--gold);color:var(--gold);font-size:15px;font-weight:900;letter-spacing:1px;padding:3px 12px;border-radius:14px}
+#glanceTag.show{animation:wordPop 1s ease-out forwards}
 @keyframes wordPop{0%{transform:scale(.3) rotate(-5deg);opacity:0}18%{transform:scale(1.35) rotate(1deg);opacity:1}38%{transform:scale(1.05)}75%{opacity:1}100%{transform:scale(1.12) translateY(-8px);opacity:0}}
 .splat{position:absolute;z-index:5;font-weight:900;color:#fff;background:radial-gradient(circle at 35% 30%,#ef5350,#b71c1c 70%);border:2px solid #7f0000;border-radius:50%;width:52px;height:52px;display:flex;align-items:center;justify-content:center;font-size:24px;pointer-events:none;animation:splatA 1.05s ease-out forwards;text-shadow:0 2px 3px #000}
 @keyframes splatA{0%{transform:scale(.3);opacity:0}16%{transform:scale(1.3);opacity:1}30%{transform:scale(1)}100%{transform:translateY(-56px) scale(1.05);opacity:0}}
@@ -116,7 +119,7 @@ select{background:#0d0a05;color:var(--ink);padding:7px;border-radius:8px;border:
 <div id="loginScreen">
   <h1>⚔️ Duelgame Online</h1>
   <p class="sub">The 3-Tick Duel Arena — now against <b>real online players</b>.</p>
-  <div class="rules">🗡️ <b>Attack</b> beats Strength (4) · 💪 <b>Strength</b> beats Defence (6) · 🛡️ <b>Defence</b> beats Attack (2)<br>Same move: CLASH! 1/1 — defence/defence: GUARDED 0/0. 30 HP, one exchange every second (3 ticks). Winner takes the pot.</div>
+  <div class="rules">🗡️ <b>Attack</b> beats Strength (4) · 💪 <b>Strength</b> beats Defence (6) · 🛡️ <b>Defence</b> beats Attack (2)<br>Same move: CLASH! 1/1 — defence/defence: GUARDED 0/0. 30 HP, one exchange every second (3 ticks). Hits knock you back — you walk back into reach, and a hit landed while you're still closing in glances for 1 less. Winner takes the pot.</div>
   <input id="uname" placeholder="Username" autocomplete="username">
   <input id="pword" type="password" placeholder="Password (3+ chars)" autocomplete="current-password">
   <div class="row"><button id="btnRegister">Register (start 50 gp)</button><button id="btnLogin">Log in</button></div>
@@ -142,6 +145,7 @@ select{background:#0d0a05;color:var(--ink);padding:7px;border-radius:8px;border:
     </div>
     <div id="winnerBanner" class="overlay"></div>
     <div id="wordBanner" class="overlay"></div>
+    <div id="glanceTag" class="overlay"><span>⚡ GLANCING!</span></div>
     <div id="countdown" class="overlay"></div>
     <div id="flash"></div>
   </div>
@@ -295,10 +299,15 @@ function handle(m){
     const iTook = (me===m.a&&m.aDmg>0)||(me===m.b&&m.bDmg>0);
     if(iTook || m.aDmg>=6 || m.bDmg>=6) doFlash();
     const dmg=Math.max(m.aDmg,m.bDmg);
-    addShake(dmg>=6?.55:dmg>0?.32:.16);
+    addShake(m.glance?.2:(dmg>=6?.55:dmg>0?.32:.16)); // a glancing hit lands smaller
     if(m.word==='BLOCKED!'||m.word==='GUARDED') sndBlock(); else if(m.word==='CLASH!') sndClash(); else sndClang(dmg>=6);
     document.querySelectorAll('#moves button').forEach(b=>b.classList.remove('locked')); lockedMove=null;
-    $('duelStatus').textContent=m.a+' used '+m.moveA+' · '+m.b+' used '+m.moveB+' — '+m.word;
+    let status=m.a+' used '+m.moveA+' · '+m.b+' used '+m.moveB+' — '+m.word;
+    if(m.glance){
+      const gt=$('glanceTag'); gt.classList.remove('show'); void gt.offsetWidth; gt.classList.add('show');
+      status+=' · ⚡ GLANCING! '+(m.glance==='a'?m.a:m.b)+"'s hit was off — still closing in";
+    }
+    $('duelStatus').textContent=status;
     return;
   }
   if(m.type==='duelEnd'){
@@ -531,7 +540,7 @@ function makeKnight(colors){
   add(new THREE.Mesh(new THREE.BoxGeometry(.03,.95,.1),M.gold),-.06,0,0,shieldG);
   add(new THREE.Mesh(new THREE.BoxGeometry(.03,.1,.72),M.gold),-.06,0,0,shieldG);
   add(new THREE.Mesh(new THREE.SphereGeometry(.09,8,6),M.gold),-.08,0,0,shieldG);
-  g.userData={torsoG,headG,shR,elR,wrR,shL,elL,shieldG,legL,legR,cape,tip,bladeBase,mats:{armor:M.armor,trim:M.trim,plume:M.plume,shield:M.shield},baseX:0,facing:1,blob:null,trail:null,anim:{swing:null,knock:-1,knockDir:1}};
+  g.userData={torsoG,headG,shR,elR,wrR,shL,elL,shieldG,legL,legR,cape,tip,bladeBase,mats:{armor:M.armor,trim:M.trim,plume:M.plume,shield:M.shield},baseX:0,facing:1,blob:null,trail:null,dispPos:0,dispAnim:null,walkPhase:0,anim:{swing:null,knock:-1,knockDir:1}};
   // ready guard stance
   shR.rotation.set(GUARD.shX,0,GUARD.shZ); elR.rotation.x=GUARD.elX; wrR.rotation.x=GUARD.wrX;
   shL.rotation.x=-.4; elL.rotation.x=-.55;
@@ -539,7 +548,32 @@ function makeKnight(colors){
 }
 function setKnightColors(k,colors){ if(!k||!colors) return; const m=k.userData.mats; m.armor.color.set(colors.armor); m.trim.color.set(colors.trim); m.plume.color.set(colors.plume); m.shield.color.set(colors.shield); if(k.userData.cape) k.userData.cape.material.color.set(colors.trim); }
 function applyGuardPose(k){ const u=k.userData; u.shR.rotation.set(GUARD.shX,0,GUARD.shZ); u.elR.rotation.x=GUARD.elX; u.wrR.rotation.x=GUARD.wrX; u.shL.rotation.x=-.4; u.elL.rotation.x=-.55; u.shieldG.position.set(-.14,-.34,0); u.torsoG.rotation.set(0,0,0); u.headG.rotation.set(0,0,0); }
-function resetKnightPose(){ [knightA,knightB].forEach(k=>{ if(!k) return; k.userData.anim={swing:null,knock:-1,knockDir:1}; applyGuardPose(k); clearTrail(k.userData); k.position.x=k.userData.baseX; k.position.z=0; k.rotation.z=0; }); }
+/* ---- Reach / knockback stance (mirrors the server's duel layer) ----
+   Home stance is x ±HOME_X (gap 3.1). A fighter can hit while the gap is
+   <= REACH_GAP (3.4), i.e. combined displacement <= 0.3. Taking a hit slides
+   your displayed displacement OUT to the server's authoritative disp; at the
+   start of the next cycle you WALK forward (legs stepping) back to reach. */
+const HOME_X=1.55, REACH_ALLOW=0.30, WALK_SPEED=2.4; // units/sec: a 0.9u walk-in takes ~375ms, inside the 1s exchange cycle
+function standX(k){ return k.userData.baseX - k.userData.facing*k.userData.dispPos; }
+function setDisp(k,target,kind,dur){
+  if(!k) return; const u=k.userData;
+  const from=u.dispPos, dist=Math.abs(target-from);
+  if(dist<0.001){ u.dispPos=target; u.dispAnim=null; return; }
+  // wall-clock timed (performance.now) so the walk takes its real 250-500ms even if the frame rate dips
+  u.dispAnim={from,to:target,start:performance.now(),durMs:(dur||Math.min(.55,Math.max(kind==='walk'?.25:.18,dist/WALK_SPEED)))*1000,kind:kind||'kb'};
+}
+function walkedTargets(dispA,dispB){ // same largest-first rule as the server's applyWalkForward
+  const d={a:dispA,b:dispB}; let excess=(d.a+d.b)-REACH_ALLOW;
+  while(excess>0.0005 && (d.a>0||d.b>0)){ const s=d.a>=d.b?'a':'b'; const step=Math.min(d[s],excess); d[s]-=step; excess-=step; }
+  return d;
+}
+function scheduleWalkForward(){
+  if(!knightA||!knightB) return;
+  const t=walkedTargets(knightA.userData.dispPos,knightB.userData.dispPos);
+  setDisp(knightA,t.a,'walk'); setDisp(knightB,t.b,'walk');
+}
+window._reach=()=>{ if(!knightA||!knightB) return null; const a=knightA.userData,b=knightB.userData; return {home:HOME_X,xA:knightA.position.x,xB:knightB.position.x,gap:knightB.position.x-knightA.position.x,dispA:a.dispPos,dispB:b.dispPos,walkingA:!!(a.dispAnim&&a.dispAnim.kind==='walk'),walkingB:!!(b.dispAnim&&b.dispAnim.kind==='walk'),animA:a.dispAnim?a.dispAnim.kind:null,animB:b.dispAnim?b.dispAnim.kind:null}; };
+function resetKnightPose(){ [knightA,knightB].forEach(k=>{ if(!k) return; k.userData.anim={swing:null,knock:-1,knockDir:1}; k.userData.dispPos=0; k.userData.dispAnim=null; applyGuardPose(k); clearTrail(k.userData); k.position.x=k.userData.baseX; k.position.z=0; k.rotation.z=0; }); }
 const TRAIL_MAX=16;
 function makeTrailMesh(){
   const geo=new THREE.BufferGeometry();
@@ -620,8 +654,8 @@ function initScene(){
   { const n=130, pos=new Float32Array(n*3); for(let i=0;i<n;i++){ pos[i*3]=(Math.random()-.5)*17; pos[i*3+1]=.3+Math.random()*4.6; pos[i*3+2]=(Math.random()-.5)*17; } const geo=new THREE.BufferGeometry(); geo.setAttribute('position',new THREE.BufferAttribute(pos,3)); dustPts=new THREE.Points(geo,new THREE.PointsMaterial({color:0xffe2a8,size:.07,transparent:true,opacity:.65})); scene.add(dustPts); }
   // spark burst pool
   { const n=70, pos=new Float32Array(n*3); const geo=new THREE.BufferGeometry(); geo.setAttribute('position',new THREE.BufferAttribute(pos,3)); sparks={pts:new THREE.Points(geo,new THREE.PointsMaterial({color:0xffcf5e,size:.13,transparent:true,opacity:0,blending:THREE.AdditiveBlending,depthWrite:false})),vel:[],life:0}; sparks.pts.frustumCulled=false; scene.add(sparks.pts); }
-  knightA=makeKnight({armor:'#9a8a72',trim:'#6b5d49',plume:'#b0a58e',shield:'#8a7a5f'}); knightA.position.set(-2.4,0,0); knightA.rotation.y=Math.PI/2; knightA.userData.baseX=-2.4; knightA.userData.facing=1; knightA.traverse(o=>{o.castShadow=true;o.receiveShadow=true;}); scene.add(knightA);
-  knightB=makeKnight({armor:'#7d8ca3',trim:'#46536b',plume:'#e8e8f0',shield:'#5b6c8c'}); knightB.position.set(2.4,0,0); knightB.rotation.y=-Math.PI/2; knightB.userData.baseX=2.4; knightB.userData.facing=-1; knightB.traverse(o=>{o.castShadow=true;o.receiveShadow=true;}); scene.add(knightB);
+  knightA=makeKnight({armor:'#9a8a72',trim:'#6b5d49',plume:'#b0a58e',shield:'#8a7a5f'}); knightA.position.set(-HOME_X,0,0); knightA.rotation.y=Math.PI/2; knightA.userData.baseX=-HOME_X; knightA.userData.facing=1; knightA.traverse(o=>{o.castShadow=true;o.receiveShadow=true;}); scene.add(knightA);
+  knightB=makeKnight({armor:'#7d8ca3',trim:'#46536b',plume:'#e8e8f0',shield:'#5b6c8c'}); knightB.position.set(HOME_X,0,0); knightB.rotation.y=-Math.PI/2; knightB.userData.baseX=HOME_X; knightB.userData.facing=-1; knightB.traverse(o=>{o.castShadow=true;o.receiveShadow=true;}); scene.add(knightB);
   // blade-trail ribbons + soft contact blob shadows (backup under the real shadow)
   const blobT=blobTex();
   [knightA,knightB].forEach(k=>{
@@ -650,20 +684,25 @@ function initScene(){
         const sw=Math.sin(t*1.7+idx*1.9);
         _pose.shX+=sw*.045; _pose.elX+=Math.sin(t*1.7+idx*1.9+.6)*.05; _pose.twist+=sw*.02;
       }
-      // --- loser knockback overlay, timed from the impact frame ---
+      // --- loser knockback overlay, timed from the impact frame (small jolt;
+      // the lasting displacement is the dispAnim slide below, which ENDS displaced) ---
       let kx=0, tilt=0, headSnap=0;
-      if(an.knock>=0){ an.knock+=dt/.42; const p=an.knock; if(p>=1){ an.knock=-1; } else { const s=Math.sin(p*Math.PI); kx=an.knockDir*.5*s; tilt=-an.knockDir*.14*s; headSnap=s; } }
-      const bobY=Math.abs(Math.sin(t*2.4+idx*1.7))*.05*(an.swing?.35:1);
+      if(an.knock>=0){ an.knock+=dt/.42; const p=an.knock; if(p>=1){ an.knock=-1; } else { const s=Math.sin(p*Math.PI); kx=an.knockDir*.18*s; tilt=-an.knockDir*.14*s; headSnap=s; } }
+      // --- displacement: knockback slide OUT, then walk-forward back into reach ---
+      let walking=false;
+      if(u.dispAnim){ const da=u.dispAnim; const p=Math.min(1,(performance.now()-da.start)/da.durMs); const e=da.kind==='walk' ? p : 1-Math.pow(1-p,3); u.dispPos=da.from+(da.to-da.from)*e; walking=(da.kind==='walk'&&p<1); if(walking) u.walkPhase+=dt*11+.35; if(p>=1){ u.dispPos=da.to; u.dispAnim=null; } }
+      const bobY=Math.abs(Math.sin(t*2.4+idx*1.7))*.05*(an.swing?.35:1)+(walking?Math.abs(Math.sin(u.walkPhase))*.07:0);
       u.shR.rotation.set(_pose.shX,0,_pose.shZ); u.elR.rotation.x=_pose.elX; u.wrR.rotation.x=_pose.wrX;
       u.shL.rotation.x=-.4-_pose.shield*.85; u.elL.rotation.x=-.55-_pose.shield*.3;
       u.shieldG.position.set(-.14-_pose.shield*.04,-.34+_pose.shield*.16,_pose.shield*.32);
       u.torsoG.rotation.y=_pose.twist; u.torsoG.rotation.x=_pose.lean;
       u.headG.rotation.x=-.45*headSnap; u.headG.rotation.z=tilt*1.5;
       const idleStep=Math.sin(t*2.4+idx*1.7)*.06;
-      u.legL.rotation.x=idleStep-_pose.lunge*.5+_pose.crouch*.45;
-      u.legR.rotation.x=-idleStep+_pose.lunge*.36-_pose.crouch*.25;
+      const walkStep=walking?Math.sin(u.walkPhase)*.5:0; // legs visibly step while closing distance
+      u.legL.rotation.x=idleStep-_pose.lunge*.5+_pose.crouch*.45+walkStep;
+      u.legR.rotation.x=-idleStep+_pose.lunge*.36-_pose.crouch*.25-walkStep;
       if(u.cape) u.cape.rotation.x=.12+Math.sin(t*1.8+idx)*.05+_pose.lean*.35;
-      k.position.x=u.baseX+u.facing*_pose.lunge+kx;
+      k.position.x=standX(k)+u.facing*_pose.lunge+kx;
       k.position.y=bobY-_pose.crouch;
       k.position.z=0; k.rotation.z=tilt;
       updateTrail(u,dt);
@@ -680,7 +719,7 @@ function initScene(){
     else if(crown&&crown.visible){ crown.rotation.y+=dt*.8; crown.position.y=3.05+Math.sin(t*2)*.05; }
     // camera: modes + shake
     let desPos, desLook;
-    if(camMode==='winner'){ const wx=camWinnerA?-2.4:2.4; desPos=new THREE.Vector3(wx*.55,2.6,6.4); desLook=new THREE.Vector3(wx,1.5,0); }
+    if(camMode==='winner'){ const wk=camWinnerA?knightA:knightB; const wx=wk?wk.position.x:(camWinnerA?-HOME_X:HOME_X); desPos=new THREE.Vector3(wx*.55,2.6,6.4); desLook=new THREE.Vector3(wx,1.5,0); }
     else if(camMode==='duel'){ desPos=new THREE.Vector3(0,3.9,10.6); desLook=new THREE.Vector3(0,1.3,0); }
     else { desPos=new THREE.Vector3(0,4.4,10.2); desLook=new THREE.Vector3(0,1.3,0); }
     cam.position.lerp(desPos,.045);
@@ -688,8 +727,19 @@ function initScene(){
     cam.lookAt(desLook);
     renderer.render(scene,cam); })();
 }
-function burstSparks(x,y,z,color){ if(!sparks) return; const pos=sparks.pts.geometry.attributes.position; sparks.vel=[]; for(let i=0;i<46;i++){ pos.setXYZ(i,x,y,z); sparks.vel.push({x:(Math.random()-.5)*4.6,y:Math.random()*3.6+.6,z:(Math.random()-.5)*4.6}); } for(let i=46;i<pos.count;i++){ pos.setXYZ(i,x,-10,z); sparks.vel.push({x:0,y:0,z:0}); } pos.needsUpdate=true; sparks.pts.material.color.set(color||0xffcf5e); sparks.pts.material.opacity=1; sparks.pts.visible=true; sparks.life=1; }
+function burstSparks(x,y,z,color,count){ if(!sparks) return; const pos=sparks.pts.geometry.attributes.position; const n=Math.min(count||46,pos.count); sparks.vel=[]; for(let i=0;i<n;i++){ pos.setXYZ(i,x,y,z); sparks.vel.push({x:(Math.random()-.5)*4.6,y:Math.random()*3.6+.6,z:(Math.random()-.5)*4.6}); } for(let i=n;i<pos.count;i++){ pos.setXYZ(i,x,-10,z); sparks.vel.push({x:0,y:0,z:0}); } pos.needsUpdate=true; sparks.pts.material.color.set(color||0xffcf5e); sparks.pts.material.opacity=1; sparks.pts.visible=true; sparks.life=1; }
 function actMove(k,move){ if(!k) return; if(move==='defence') startBlock(k); else startSwing(k,move); }
+function syncDispAndWalk(m,impactDelay){
+  // At the impact frame, slide each knight OUT to the server's authoritative
+  // displacement (they END the exchange displaced), then — still inside this
+  // 1-second cycle — walk forward back into reach before the next swing.
+  setTimeout(()=>{
+    if(!duel) return;
+    if(typeof m.dispA==='number') setDisp(knightA,m.dispA,'kb');
+    if(typeof m.dispB==='number') setDisp(knightB,m.dispB,'kb');
+    setTimeout(()=>{ if(duel) scheduleWalkForward(); },260);
+  },Math.round(impactDelay));
+}
 function animateExchange(m){
   const aWon=m.winnerSide==='a';
   const moveA=m.moveA, moveB=m.moveB;
@@ -698,24 +748,32 @@ function animateExchange(m){
     else { startSwing(knightA,'clash'); startSwing(knightB,'clash'); }
     // sparks exactly where the blades meet, at the strike frame
     setTimeout(()=>{ burstSparks(0,1.85,0,0xd8b4fe); spotPulse=1; },Math.round(impactMsFor('clash')));
+    syncDispAndWalk(m,impactMsFor('clash'));
     return;
   }
   const winK=aWon?knightA:knightB, loseK=aWon?knightB:knightA;
   const winMove=aWon?moveA:moveB, loseMove=aWon?moveB:moveA;
+  // Glancing hit: the off-balance winner was still closing distance, so their
+  // swing starts LATE (after the walk-forward) and lands smaller.
+  const glanceWin = !!m.glance && m.glance===m.winnerSide;
+  const swingDelay = glanceWin ? 170 : 0;
+  const startWin=()=>{ if(winMove==='defence') startSwing(winK,'defence'); else startSwing(winK,winMove); };
   // BOTH knights act: winner with the winning move, loser with the move they locked
-  if(winMove==='defence') startSwing(winK,'defence'); else startSwing(winK,winMove);
+  if(swingDelay) setTimeout(()=>{ if(duel) startWin(); },swingDelay); else startWin();
   actMove(loseK,loseMove);
   const loserDmg=aWon?m.bDmg:m.aDmg;
+  const impactAt=Math.round(impactMsFor(winMove))+swingDelay;
   // loser reaction + sparks + light pulse land on the strike (impact) frame, not at exchange start
   setTimeout(()=>{
-    spotPulse=1;
+    spotPulse=glanceWin?.5:1;
     if(loserDmg>0 && loseK){
       loseK.userData.anim.swing=null; // the hit interrupts the loser's own swing
       startKnock(loseK, aWon?1:-1);
-      burstSparks(loseK.userData.baseX+loseK.userData.facing*.55,1.7,0, m.word==='SMASH!'?0xff7043:0xffcf5e);
+      burstSparks(loseK.position.x+loseK.userData.facing*.55,1.7,0, m.word==='SMASH!'?0xff7043:0xffcf5e, glanceWin?20:46);
     }
-  },Math.round(impactMsFor(winMove)));
+  },impactAt);
+  syncDispAndWalk(m,impactAt);
 }
-function showCrown(overA){ if(!crown) return; const k=overA?knightA:knightB; if(!k) return; crown.position.set(k.userData.baseX,4.6,0); crown.visible=true; crownDrop=0; liftPlates(true); }
+function showCrown(overA){ if(!crown) return; const k=overA?knightA:knightB; if(!k) return; crown.position.set(k.position.x,4.6,0); crown.visible=true; crownDrop=0; liftPlates(true); }
 function hideCrown(){ if(crown) crown.visible=false; crownDrop=-1; liftPlates(false); }
 </script></body></html>
