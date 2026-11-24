@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Duelgame Online — 3-Tick Duel Arena vs Real Players</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;font-family:system-ui,sans-serif;background:#17130e;color:#f5ead2;overflow-x:hidden}
+button{font:inherit;cursor:pointer;border-radius:10px;border:1px solid #6b5a38;background:#2c2417;color:#f5ead2;padding:10px 14px}
+button:active{transform:scale(.97)} .gold{color:#f7dd7a}
+#scene{position:relative;height:46vh;min-height:300px;background:#0e0c09}
+#scene canvas{width:100%!important;height:100%!important;display:block}
+.overlay{position:absolute;pointer-events:none;text-shadow:0 2px 6px #000}
+#winnerBanner{top:12px;left:0;right:0;text-align:center;font-size:26px;font-weight:800;color:#f7dd7a;display:none}
+#countdown{top:40%;left:0;right:0;text-align:center;font-size:64px;font-weight:900;color:#fff}
+#wordBanner{top:64px;left:0;right:0;text-align:center;font-size:30px;font-weight:900;color:#ffb74d}
+.splat{position:absolute;font-weight:900;color:#fff;background:#c62828;border-radius:50%;padding:6px 9px;font-size:15px;animation:pop 1s forwards}
+@keyframes pop{0%{transform:scale(.4);opacity:0}20%{transform:scale(1.25);opacity:1}100%{transform:translateY(-34px) scale(1);opacity:0}}
+.panel{padding:12px;max-width:720px;margin:0 auto}
+.hpwrap{display:flex;gap:10px;align-items:center;margin:6px 0}
+.hpbar{flex:1;height:20px;background:#3a1515;border:1px solid #000;border-radius:10px;overflow:hidden}
+.hpfill{height:100%;background:#c62828;transition:width .3s}
+#ticks{text-align:center;font-size:22px;letter-spacing:6px;color:#8d7c5c}
+#ticks .on{color:#f7dd7a}
+#moves{display:flex;gap:10px;justify-content:center;margin:10px 0}
+#moves button{flex:1;max-width:200px;font-size:19px;font-weight:800;padding:18px 6px}
+#moves button.locked{outline:3px solid #f7dd7a}
+#btnAttack{background:#6d4c1f}#btnStrength{background:#7a2020}#btnDefence{background:#274b73}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.player{display:flex;justify-content:space-between;align-items:center;background:#241d12;border:1px solid #4a3d24;border-radius:10px;padding:8px 10px;margin:6px 0}
+.swatch{display:inline-block;width:14px;height:14px;border-radius:4px;border:1px solid #000;vertical-align:-2px;margin-right:6px}
+input{background:#100d08;color:#f5ead2;border:1px solid #6b5a38;border-radius:10px;padding:11px;width:100%;margin:5px 0;font-size:16px}
+#challengePop{position:fixed;inset:auto 12px 12px 12px;background:#2c2110;border:2px solid #f7dd7a;border-radius:14px;padding:16px;display:none;z-index:9;text-align:center}
+#toast{position:fixed;top:10px;left:50%;transform:translateX(-50%);background:#000c;padding:9px 16px;border-radius:20px;display:none;z-index:10;max-width:92vw;text-align:center}
+.shop{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px}
+.shop .item{background:#241d12;border:1px solid #4a3d24;border-radius:10px;padding:10px;text-align:center}
+#chat{max-height:110px;overflow-y:auto;font-size:13px;background:#100d08;border-radius:8px;padding:8px}
+.hidden{display:none!important} select{background:#100d08;color:#f5ead2;padding:9px;border-radius:8px}
+</style></head><body>
+
+<div id="toast"></div>
+
+<!-- LOGIN -->
+<div id="loginScreen" class="panel">
+  <h1>⚔️ Duelgame Online</h1>
+  <p>The 3-Tick Duel Arena — now against <b>real online players</b>.<br>
+  🗡️ Attack beats Strength (4) · 💪 Strength beats Defence (6) · 🛡️ Defence beats Attack (2). Same move: CLASH! 1/1 — defence/defence: GUARDED 0/0. 30 HP, one exchange every second (3 ticks).</p>
+  <input id="uname" placeholder="Username" autocomplete="username">
+  <input id="pword" type="password" placeholder="Password (3+ chars)" autocomplete="current-password">
+  <div class="row"><button id="btnRegister" style="flex:1">Register (start 50 gp)</button><button id="btnLogin" style="flex:1">Log in</button></div>
+  <p id="authErr" style="color:#ef9a9a"></p>
+</div>
+
+<!-- GAME -->
+<div id="gameScreen" class="hidden">
+  <div id="scene">
+    <div id="winnerBanner" class="overlay"></div>
+    <div id="wordBanner" class="overlay"></div>
+    <div id="countdown" class="overlay"></div>
+  </div>
+  <div class="panel">
+    <div class="row" style="justify-content:space-between">
+      <b id="meName"></b>
+      <span>🪙 <b class="gold" id="meGold">50</b> gp</span>
+      <span id="meRecord">0W – 0L</span>
+      <button id="btnRefill" class="hidden">🆓 Free +50 gp refill</button>
+      <button id="btnForfeit" class="hidden">🏳️ Forfeit</button>
+    </div>
+
+    <div id="duelPanel" class="hidden">
+      <div class="hpwrap"><span id="hpALabel" style="width:110px"></span><div class="hpbar"><div class="hpfill" id="hpA" style="width:100%"></div></div><b id="hpAText">30</b></div>
+      <div class="hpwrap"><span id="hpBLabel" style="width:110px"></span><div class="hpbar"><div class="hpfill" id="hpB" style="width:100%"></div></div><b id="hpBText">30</b></div>
+      <div id="ticks"><span id="t1">●</span><span id="t2">●</span><span id="t3">●</span></div>
+      <div id="moves">
+        <button id="btnAttack">🗡️<br>Attack<br><small>beats Strength · 4</small></button>
+        <button id="btnStrength">💪<br>Strength<br><small>beats Defence · 6</small></button>
+        <button id="btnDefence">🛡️<br>Defence<br><small>beats Attack · 2</small></button>
+      </div>
+      <p id="duelStatus" style="text-align:center"></p>
+    </div>
+
+    <h3>🏟️ Lobby — online players</h3>
+    <div class="row"><label>Stake:</label><select id="stakeSel"><option>5</option><option selected>10</option><option>25</option><option>50</option><option>100</option><option>250</option></select><span>gp</span></div>
+    <div id="playerList"></div>
+
+    <h3>🤖 Practice bots (no humans needed)</h3>
+    <div id="botList"></div>
+
+    <h3>👕 Outfit shop</h3>
+    <div class="shop" id="shop"></div>
+
+    <h3>💬 Chat</h3>
+    <div id="chat"></div>
+    <div class="row"><input id="chatIn" placeholder="Say something…" style="flex:1"><button id="btnChat">Send</button></div>
+  </div>
+</div>
+
+<div id="challengePop">
+  <div id="challengeText"></div>
+  <div class="row" style="justify-content:center;margin-top:10px"><button id="btnAccept">✅ Accept</button><button id="btnDecline">❌ Decline</button></div>
+</div>
+
+<script>
+let ws=null, me=null, myOutfits=[], pendingAuth=null, duel=null, lockedMove=null;
+const $=id=>document.getElementById(id);
+function toast(t,ms=2600){const e=$('toast');e.textContent=t;e.style.display='block';setTimeout(()=>e.style.display='none',ms);}
+
+// ---- WebSocket: QUEUE auth until socket is open (the Duel Me bug, fixed here) ----
+function connect(cb){
+  ws=new WebSocket((location.protocol==='https:'?'wss://':'ws://')+location.host);
+  ws.onopen=()=>{ if(pendingAuth){ ws.send(JSON.stringify(pendingAuth)); pendingAuth=null; } if(cb)cb(); };
+  ws.onmessage=ev=>handle(JSON.parse(ev.data));
+  ws.onclose=()=>{ toast('Disconnected. Refresh to reconnect.'); if(duel) endDuelUI(); };
+}
+function send(o){ if(ws&&ws.readyState===1) ws.send(JSON.stringify(o)); else if(o.type==='register'||o.type==='login') pendingAuth=o; }
+$('btnRegister').onclick=()=>{ pendingAuth={type:'register',username:$('uname').value,password:$('pword').value}; if(!ws||ws.readyState>1) connect(); else if(ws.readyState===1){ws.send(JSON.stringify(pendingAuth));pendingAuth=null;} };
+$('btnLogin').onclick=()=>{ pendingAuth={type:'login',username:$('uname').value,password:$('pword').value}; if(!ws||ws.readyState>1) connect(); else if(ws.readyState===1){ws.send(JSON.stringify(pendingAuth));pendingAuth=null;} };
+connect();
+
+function handle(m){
+  if(m.type==='authErr'){ $('authErr').textContent=m.message; return; }
+  if(m.type==='authOk'){
+    me=m.username; myOutfits=m.outfits;
+    $('loginScreen').classList.add('hidden'); $('gameScreen').classList.remove('hidden');
+    $('meName').textContent='⚔️ '+me; applyState(m); renderShop(); renderPlayers(m.players); initScene();
+    return;
+  }
+  if(m.type==='state'){ applyState(m); return; }
+  if(m.type==='players'){ renderPlayers(m.players); return; }
+  if(m.type==='error'){ toast(m.message); return; }
+  if(m.type==='refillOk'){ toast('🆓 +50 gp refill! Gold: '+m.gold); return; }
+  if(m.type==='challengeSent'){ toast('Challenge sent to '+m.to+' for '+m.stake+' gp…'); return; }
+  if(m.type==='challengeIncoming'){
+    $('challengeText').innerHTML='⚔️ <b>'+esc(m.from)+'</b> challenges you for <b class="gold">'+m.stake+' gp</b>!<br>Winner takes the '+(m.stake*2)+' gp pot.';
+    $('challengePop').style.display='block';
+    $('btnAccept').onclick=()=>{ $('challengePop').style.display='none'; send({type:'accept',from:m.from}); };
+    $('btnDecline').onclick=()=>{ $('challengePop').style.display='none'; send({type:'decline',from:m.from}); };
+    setTimeout(()=>$('challengePop').style.display='none',30000);
+    return;
+  }
+  if(m.type==='chat'){ const c=$('chat'); c.innerHTML+='<div><b>'+esc(m.from)+':</b> '+esc(m.text)+'</div>'; c.scrollTop=c.scrollHeight; return; }
+  if(m.type==='duelStart'){
+    duel={id:m.duelId,a:m.a,b:m.b,pot:m.pot}; lockedMove=null;
+    $('duelPanel').classList.remove('hidden'); $('btnForfeit').classList.remove('hidden');
+    $('hpALabel').textContent=m.a; $('hpBLabel').textContent=m.b;
+    setHp(m.hpA,m.hpB); $('winnerBanner').style.display='none'; $('wordBanner').textContent='';
+    setKnightColors(knightA,m.colorsA); setKnightColors(knightB,m.colorsB);
+    $('duelStatus').textContent='Pot: '+m.pot+' gp — pick your move!';
+    document.querySelectorAll('#moves button').forEach(b=>b.classList.remove('locked'));
+    return;
+  }
+  if(m.type==='duelCountdown'){ $('countdown').textContent=m.n>0?m.n:''; return; }
+  if(m.type==='duelTick'){ for(let i=1;i<=3;i++) $('t'+i).className=i<=m.tickInExchange?'on':''; return; }
+  if(m.type==='duelExchange'){
+    setHp(m.hpA,m.hpB);
+    $('wordBanner').textContent=m.word; setTimeout(()=>{if($('wordBanner').textContent===m.word)$('wordBanner').textContent='';},900);
+    const iAmA = me===m.a;
+    animateExchange(iAmA?m.moveA:m.moveB, iAmA?m.moveB:m.moveA, m);
+    if(m.bDmg>0) splat(false,m.bDmg); if(m.aDmg>0) splat(true,m.aDmg);
+    $('duelStatus').textContent=m.a+' used '+m.moveA+' · '+m.b+' used '+m.moveB+' — '+m.word;
+    return;
+  }
+  if(m.type==='duelEnd'){
+    const iWon = m.winner===me;
+    $('winnerBanner').innerHTML='👑 WINNER<br>'+esc(m.winner)+' +'+m.pot+' GP';
+    $('winnerBanner').style.display='block';
+    showCrown(m.winner===duel?.a);
+    toast(iWon?'🏆 You won '+m.pot+' gp!':(m.winner+' took the '+m.pot+' gp pot.'),4000);
+    setTimeout(endDuelUI,3500);
+    return;
+  }
+}
+function endDuelUI(){ duel=null; $('duelPanel').classList.add('hidden'); $('btnForfeit').classList.add('hidden'); $('countdown').textContent=''; hideCrown(); }
+function applyState(m){ $('meGold').textContent=m.gold; $('meRecord').textContent=m.wins+'W – '+m.losses+'L'; $('btnRefill').classList.toggle('hidden',!(m.gold<5)); window._owned=m.owned; window._outfit=m.outfit; renderShop(); }
+function setHp(a,b){ $('hpA').style.width=(a/30*100)+'%'; $('hpB').style.width=(b/30*100)+'%'; $('hpAText').textContent=a; $('hpBText').textContent=b; }
+function esc(s){ const d=document.createElement('div'); d.textContent=String(s); return d.innerHTML; }
+
+function renderPlayers(players){
+  if(!players) return;
+  const humans=players.filter(p=>!p.isBot), bots=players.filter(p=>p.isBot);
+  $('playerList').innerHTML=humans.length?humans.map(p=>{
+    const mine=p.username===me;
+    return '<div class="player"><span><span class="swatch" style="background:'+(p.colors?p.colors.armor:'#888')+'"></span><b>'+esc(p.username)+'</b>'+(mine?' (you)':'')+' · 🪙 '+(p.gold??'—')+' gp · '+p.wins+'W-'+p.losses+'L'+(p.inDuel?' · ⚔️ in duel':'')+'</span>'+(mine||p.inDuel?'':'<button onclick="challenge(\''+esc(p.username)+'\')">⚔️ Challenge</button>')+'</div>';
+  }).join(''):'<p>No one else online yet — try a practice bot below.</p>';
+  $('botList').innerHTML=bots.map(p=>'<div class="player"><span><span class="swatch" style="background:'+p.colors.armor+'"></span><b>'+esc(p.username)+'</b> 🤖 · '+esc(p.title||'')+' · stake '+p.stake+' gp'+(p.inDuel?' · ⚔️ in duel':'')+'<br><small>'+esc(p.taunt||'')+'</small></span>'+(p.inDuel?'':'<button onclick="challengeBot(\''+esc(p.username)+'\','+p.stake+')">⚔️ Fight '+p.stake+' gp</button>')+'</div>').join('');
+}
+window.challenge=name=>send({type:'challenge',target:name,stake:Number($('stakeSel').value)});
+window.challengeBot=(name,stake)=>send({type:'challenge',target:name,stake});
+
+function renderShop(){
+  if(!myOutfits.length) return;
+  $('shop').innerHTML=myOutfits.map(o=>{
+    const owned=(window._owned||[]).includes(o.id), eq=window._outfit===o.id;
+    return '<div class="item"><span class="swatch" style="background:'+o.colors.armor+'"></span><b>'+esc(o.name)+'</b><br><small>'+esc(o.blurb)+'</small><br>'+(eq?'✅ Equipped':owned?'<button onclick="equip(\''+o.id+'\')">Wear</button>':'<button onclick="buy(\''+o.id+'\')">'+o.price+' gp — Buy</button>')+'</div>';
+  }).join('');
+}
+window.buy=id=>send({type:'buy',outfitId:id});
+window.equip=id=>send({type:'equip',outfitId:id});
+
+$('btnRefill').onclick=()=>send({type:'refill'});
+$('btnForfeit').onclick=()=>send({type:'forfeit'});
+$('btnChat').onclick=()=>{ const t=$('chatIn').value.trim(); if(t){ send({type:'chat',text:t}); $('chatIn').value=''; } };
+function lockMove(mv,btn){ lockedMove=mv; send({type:'duelMove',move:mv}); document.querySelectorAll('#moves button').forEach(b=>b.classList.remove('locked')); btn.classList.add('locked'); }
+$('btnAttack').onclick=e=>lockMove('attack',e.currentTarget);
+$('btnStrength').onclick=e=>lockMove('strength',e.currentTarget);
+$('btnDefence').onclick=e=>lockMove('defence',e.currentTarget);
+
+function splat(leftSide,dmg){
+  const s=document.createElement('div'); s.className='splat'; s.textContent='-'+dmg;
+  s.style.left=leftSide?'26%':'68%'; s.style.top='38%'; $('scene').appendChild(s); setTimeout(()=>s.remove(),1000);
+}
+
+// ---- 3D pit (Three.js, two low-poly knights in outfit colours) ----
+let knightA=null, knightB=null, crown=null, sceneReady=false;
+function makeKnight(colors){
+  const g=new THREE.Group();
+  const mat=c=>new THREE.MeshLambertMaterial({color:c});
+  const body=new THREE.Mesh(new THREE.BoxGeometry(0.9,1.1,0.5),mat(colors.armor)); body.position.y=1.15; g.add(body);
+  const head=new THREE.Mesh(new THREE.BoxGeometry(0.55,0.55,0.55),mat(colors.trim)); head.position.y=2.0; g.add(head);
+  const plume=new THREE.Mesh(new THREE.BoxGeometry(0.16,0.4,0.5),mat(colors.plume)); plume.position.set(0,2.42,-0.05); g.add(plume);
+  const legL=new THREE.Mesh(new THREE.BoxGeometry(0.32,0.65,0.4),mat(colors.trim)); legL.position.set(-0.24,0.33,0); g.add(legL);
+  const legR=legL.clone(); legR.position.x=0.24; g.add(legR);
+  const armR=new THREE.Group(); armR.position.set(0.6,1.6,0);
+  const armMesh=new THREE.Mesh(new THREE.BoxGeometry(0.28,0.85,0.28),mat(colors.armor)); armMesh.position.y=-0.3; armR.add(armMesh);
+  const sword=new THREE.Mesh(new THREE.BoxGeometry(0.09,1.15,0.09),new THREE.MeshLambertMaterial({color:0xdfe9f5})); sword.position.y=-1.05; armR.add(sword);
+  g.add(armR); g.userData.arm=armR;
+  const shield=new THREE.Mesh(new THREE.BoxGeometry(0.12,0.95,0.75),mat(colors.shield)); shield.position.set(-0.62,1.2,0); g.add(shield);
+  g.userData.mats={armor:body.material,trim:head.material,plume:plume.material,shield:shield.material};
+  return g;
+}
+function setKnightColors(k,colors){ if(!k||!colors) return; k.userData.mats.armor.color.set(colors.armor); k.userData.mats.trim.color.set(colors.trim); k.userData.mats.plume.color.set(colors.plume); k.userData.mats.shield.color.set(colors.shield); }
+function initScene(){
+  if(sceneReady||typeof THREE==='undefined') return; sceneReady=true;
+  const el=$('scene');
+  const scene=new THREE.Scene(); scene.background=new THREE.Color(0x1a2436); scene.fog=new THREE.Fog(0x1a2436,18,40);
+  const cam=new THREE.PerspectiveCamera(50,el.clientWidth/el.clientHeight,0.1,100); cam.position.set(0,4.2,9.5); cam.lookAt(0,1.2,0);
+  const renderer=new THREE.WebGLRenderer({antialias:true}); renderer.setSize(el.clientWidth,el.clientHeight); el.appendChild(renderer.domElement);
+  scene.add(new THREE.AmbientLight(0xffffff,0.75));
+  const sun=new THREE.DirectionalLight(0xffe0a3,0.9); sun.position.set(5,10,6); scene.add(sun);
+  const ground=new THREE.Mesh(new THREE.CircleGeometry(7,28),new THREE.MeshLambertMaterial({color:0x8a7a5c})); ground.rotation.x=-Math.PI/2; scene.add(ground);
+  const ring=new THREE.Mesh(new THREE.TorusGeometry(7,0.16,8,40),new THREE.MeshLambertMaterial({color:0xf7dd7a})); ring.rotation.x=Math.PI/2; ring.position.y=0.08; scene.add(ring);
+  for(let i=0;i<10;i++){ const post=new THREE.Mesh(new THREE.CylinderGeometry(0.09,0.09,1.6,6),new THREE.MeshLambertMaterial({color:0x5c4f38})); const a=i/10*Math.PI*2; post.position.set(Math.cos(a)*7.6,0.8,Math.sin(a)*7.6); scene.add(post); }
+  knightA=makeKnight({armor:'#9a8a72',trim:'#6b5d49',plume:'#b0a58e',shield:'#8a7a5f'}); knightA.position.set(-2.4,0,0); knightA.rotation.y=Math.PI/2; scene.add(knightA);
+  knightB=makeKnight({armor:'#7d8ca3',trim:'#46536b',plume:'#e8e8f0',shield:'#5b6c8c'}); knightB.position.set(2.4,0,0); knightB.rotation.y=-Math.PI/2; scene.add(knightB);
+  crown=new THREE.Group();
+  const cm=new THREE.MeshLambertMaterial({color:0xf7dd7a});
+  const band=new THREE.Mesh(new THREE.CylinderGeometry(0.42,0.42,0.22,8,1,true),cm); crown.add(band);
+  for(let i=0;i<4;i++){ const spike=new THREE.Mesh(new THREE.ConeGeometry(0.11,0.3,4),cm); const a=i/4*Math.PI*2; spike.position.set(Math.cos(a)*0.36,0.25,Math.sin(a)*0.36); crown.add(spike); }
+  crown.visible=false; scene.add(crown);
+  window._anim={t:0};
+  (function loop(){ requestAnimationFrame(loop); window._anim.t+=0.03;
+    if(knightA) knightA.position.y=Math.abs(Math.sin(window._anim.t))*0.05;
+    if(knightB) knightB.position.y=Math.abs(Math.cos(window._anim.t))*0.05;
+    renderer.render(scene,cam); })();
+}
+function swing(k){ if(!k) return; const arm=k.userData.arm; let p=0; const iv=setInterval(()=>{ p+=0.16; arm.rotation.x=-Math.sin(Math.min(p,1)*Math.PI)*1.9; if(p>=1){arm.rotation.x=0;clearInterval(iv);} },30); }
+function animateExchange(myMove,oppMove,m){
+  // A is left, B is right; winner side swings, defence raises (arm half), loser side also shown
+  const aWon=m.winnerSide==='a', bWon=m.winnerSide==='b';
+  if(m.winnerSide==='clash'){ swing(knightA); swing(knightB); return; }
+  if(aWon) swing(knightA); if(bWon) swing(knightB);
+}
+function showCrown(overA){ if(!crown) return; const k=overA?knightA:knightB; if(!k) return; crown.position.set(k.position.x,2.95,k.position.z); crown.visible=true; }
+function hideCrown(){ if(crown) crown.visible=false; }
+</script></body></html>
