@@ -76,7 +76,27 @@ const BOTS = [
   { id: 'pip',  name: 'Squire Pip',       title: 'Training-yard squire',    stake: 5,  style: { attack: 3, strength: 2, defence: 5 }, cunning: 0,    colors: { armor: '#8a7a5c', trim: '#5c4f38', plume: '#c9b458', shield: '#a08b62' }, taunt: 'Pip hides behind his shield a lot. Smash through it.' },
   { id: 'bram', name: 'Hedge Knight Bram',title: 'Road-worn sellsword',     stake: 10, style: { attack: 4, strength: 3, defence: 3 }, cunning: 0.15, colors: { armor: '#6e7f5e', trim: '#44513a', plume: '#7d9b6a', shield: '#5e7050' }, taunt: 'Bram mixes it up. Watch what he leans on.' },
   { id: 'mara', name: 'Pit Dog Mara',     title: 'Bare-knuckle pit fighter', stake: 25, style: { attack: 6, strength: 3, defence: 1 }, cunning: 0.2,  colors: { armor: '#7d4a3a', trim: '#4e2d22', plume: '#c0392b', shield: '#8a5a44' }, taunt: 'Mara almost never guards. Block her swings and punish the big ones.' },
+  { id: 'champion', name: 'Arena Champion', title: 'Campaign final · holder of the gold belt', stake: 0, style: { attack: 4, strength: 4, defence: 3 }, cunning: 0.6, colors: { armor: '#d4af37', trim: '#17130a', plume: '#f7dd7a', shield: '#26221a' }, taunt: 'The Champion reads you like a book. Only met in a Campaign final.', campaignOnly: true },
 ];
+
+// ---------- Campaign / tournament mode ----------
+// A run = 4 rounds vs bots in order. FREE entry, NO stake taken; each round win
+// pays a minted prize (like the refill mint — it is not taken from any pot, and
+// the duel's pot stays 0 so it can never double-pay with the stake system).
+// Lose any round (incl. forfeit/disconnect) = run ends, prizes already won are
+// kept. Clearing round 4 awards a trophy (profile.trophies +1, persisted).
+const CAMPAIGN_ROUNDS = [
+  { botId: 'pip', prize: 10 },
+  { botId: 'bram', prize: 20 },
+  { botId: 'mara', prize: 40 },
+  { botId: 'champion', prize: 100 },
+];
+const campaignInfo = () => CAMPAIGN_ROUNDS.map(r => { const b = botById(r.botId); return { botId: r.botId, name: b.name, title: b.title, prize: r.prize, colors: b.colors, taunt: b.taunt }; });
+function campaignOf(u) {
+  if (!u.campaign) u.campaign = { active: false, round: 0, won: [] };
+  if (typeof u.trophies !== 'number') u.trophies = 0;
+  return { active: !!u.campaign.active, round: u.campaign.active ? u.campaign.round : 0, wonRounds: [...(u.campaign.won || [])] };
+}
 const botByName = name => BOTS.find(b => b.name === name);
 const botById = id => BOTS.find(b => b.id === id);
 // Live bot state (duel occupancy + record for the lobby list)
@@ -114,7 +134,7 @@ function saveDbNow() {
 function hashPw(password, salt) { return crypto.scryptSync(String(password), salt, 32).toString('hex'); }
 function newUser(password) {
   const salt = crypto.randomBytes(16).toString('hex');
-  return { salt, hash: hashPw(password, salt), gold: 50, owned: ['peasant'], outfit: 'peasant', wins: 0, losses: 0 };
+  return { salt, hash: hashPw(password, salt), gold: 50, owned: ['peasant'], outfit: 'peasant', wins: 0, losses: 0, trophies: 0, campaign: { active: false, round: 0, won: [] } };
 }
 function checkPw(user, password) {
   const h = Buffer.from(hashPw(password, user.salt), 'hex');
@@ -152,28 +172,35 @@ function publicPlayer(name) {
 function playerList() {
   const list = [];
   for (const name of clients.keys()) list.push(publicPlayer(name));
-  for (const b of BOTS) list.push({ username: b.name, isBot: true, botId: b.id, title: b.title, stake: b.stake, taunt: b.taunt, gold: null, wins: botState[b.id].wins, losses: botState[b.id].losses, outfit: null, colors: b.colors, inDuel: !!botState[b.id].duelId });
+  for (const b of BOTS) list.push({ username: b.name, isBot: true, botId: b.id, title: b.title, stake: b.stake, taunt: b.taunt, gold: null, wins: botState[b.id].wins, losses: botState[b.id].losses, outfit: null, colors: b.colors, inDuel: !!botState[b.id].duelId, campaignOnly: !!b.campaignOnly });
   return list;
 }
 function broadcastPlayers() { const l = playerList(); broadcast({ type: 'players', players: l }); }
 function personalState(name) {
   const u = db.users[name]; if (!u) return;
   const c = clients.get(name);
-  send(c && c.ws, { type: 'state', gold: u.gold, wins: u.wins, losses: u.losses, owned: u.owned, outfit: u.outfit });
+  send(c && c.ws, { type: 'state', gold: u.gold, wins: u.wins, losses: u.losses, owned: u.owned, outfit: u.outfit, trophies: u.trophies || 0, campaign: campaignOf(u) });
 }
 function sysChat(text) { broadcast({ type: 'chat', from: '⚔️ Duelgame', text, kind: 'system' }); }
 
 // ---------- Duels ----------
-function startDuel(nameA, nameB, stake) {
+function startDuel(nameA, nameB, stake, opts) {
+  opts = opts || {};
+  const isCampaign = !!opts.campaign;
   const botDef = botByName(nameB);
   const isBotDuel = !!botDef;
-  const ua = db.users[nameA]; ua.gold -= stake;
+  const ua = db.users[nameA];
   let ub = null;
-  if (!isBotDuel) { ub = db.users[nameB]; ub.gold -= stake; }
+  if (isCampaign) { stake = 0; } // campaign duels take NO stake — prize only, paid once at settle
+  else {
+    ua.gold -= stake;
+    if (!isBotDuel) { ub = db.users[nameB]; ub.gold -= stake; }
+  }
   saveDb();
   const id = 'duel' + (duelSeq++);
   const duel = {
-    id, a: nameA, b: nameB, stake, pot: stake * 2, isBotDuel, botId: isBotDuel ? botDef.id : null,
+    id, a: nameA, b: nameB, stake, pot: isCampaign ? 0 : stake * 2, isBotDuel, botId: isBotDuel ? botDef.id : null,
+    campaign: isCampaign, round: isCampaign ? opts.round : 0, prize: isCampaign ? opts.prize : 0,
     hp: { a: MAX_HP, b: MAX_HP },
     offBalance: { a: false, b: false }, // took >=2 dmg last exchange: next win glances
     disp: { a: 0, b: 0 },               // authoritative knockback displacement per fighter
@@ -187,8 +214,9 @@ function startDuel(nameA, nameB, stake) {
   personalState(nameA); if (ub) personalState(nameB);
   broadcastPlayers();
   const colorsOf = n => { const bot = botByName(n); if (bot) return bot.colors; const u = db.users[n]; return outfitById(u ? u.outfit : 'peasant').colors; };
-  broadcast({ type: 'duelStart', duelId: id, a: nameA, b: nameB, stake, pot: duel.pot, hpA: MAX_HP, hpB: MAX_HP, colorsA: colorsOf(nameA), colorsB: colorsOf(nameB), homeGap: HOME_GAP, reachGap: REACH_GAP, dispA: 0, dispB: 0 });
-  sysChat(`${nameA} vs ${nameB} — ${stake} gp each in the pit!`);
+  broadcast({ type: 'duelStart', duelId: id, a: nameA, b: nameB, stake, pot: duel.pot, hpA: MAX_HP, hpB: MAX_HP, colorsA: colorsOf(nameA), colorsB: colorsOf(nameB), homeGap: HOME_GAP, reachGap: REACH_GAP, dispA: 0, dispB: 0, campaign: isCampaign, round: duel.round, prize: duel.prize });
+  if (isCampaign) sysChat(`🏆 Campaign Round ${duel.round}: ${nameA} vs ${nameB} — ${duel.prize} gp prize!`);
+  else sysChat(`${nameA} vs ${nameB} — ${stake} gp each in the pit!`);
   let count = 3;
   broadcast({ type: 'duelCountdown', duelId: id, n: count });
   duel.timer = setInterval(() => {
@@ -242,17 +270,41 @@ function settleDuel(duel, winnerName, reason) {
   if (duel.timer) clearInterval(duel.timer);
   const loserName = winnerName === duel.a ? duel.b : duel.a;
   const winnerBot = botByName(winnerName), loserBot = botByName(loserName);
-  if (!winnerBot) { const w = db.users[winnerName]; if (w) { w.gold += duel.pot; w.wins += 1; } }
-  else botState[winnerBot.id].wins += 1;
-  if (!loserBot) { const l = db.users[loserName]; if (l) l.losses += 1; }
-  else botState[loserBot.id].losses += 1;
+  let prizeWon = 0, trophyWon = false;
+  if (duel.campaign) {
+    // Campaign settle: NO pot exists. Human is duel.a. Win = minted prize paid
+    // exactly once (this function is guarded by duel.settled) + run advances;
+    // clearing round 4 also mints a trophy. Loss = run ends, prizes kept.
+    const human = db.users[duel.a];
+    if (human) {
+      campaignOf(human); // ensure campaign/trophies fields exist
+      if (winnerName === duel.a) {
+        prizeWon = duel.prize;
+        human.gold += duel.prize; human.wins += 1;
+        human.campaign.won = [...(human.campaign.won || []), duel.round];
+        if (duel.round >= CAMPAIGN_ROUNDS.length) { human.trophies += 1; trophyWon = true; human.campaign.active = false; human.campaign.round = 0; }
+        else human.campaign.round = duel.round + 1;
+      } else {
+        human.losses += 1;
+        human.campaign.active = false; human.campaign.round = 0; // run ends; won prizes stay in gold
+      }
+    }
+    if (winnerBot) botState[winnerBot.id].wins += 1;
+    if (loserBot) botState[loserBot.id].losses += 1;
+  } else {
+    if (!winnerBot) { const w = db.users[winnerName]; if (w) { w.gold += duel.pot; w.wins += 1; } }
+    else botState[winnerBot.id].wins += 1;
+    if (!loserBot) { const l = db.users[loserName]; if (l) l.losses += 1; }
+    else botState[loserBot.id].losses += 1;
+  }
   saveDbNow();
   const ca = clients.get(duel.a); if (ca && ca.duelId === duel.id) ca.duelId = null;
   if (!duel.isBotDuel) { const cb = clients.get(duel.b); if (cb && cb.duelId === duel.id) cb.duelId = null; }
   if (duel.botId && botState[duel.botId].duelId === duel.id) botState[duel.botId].duelId = null;
   duels.delete(duel.id);
-  broadcast({ type: 'duelEnd', duelId: duel.id, winner: winnerName, loser: loserName, pot: duel.pot, reason });
-  sysChat(`🏆 ${winnerName} beat ${loserName} and took the ${duel.pot} gp pot!`);
+  broadcast({ type: 'duelEnd', duelId: duel.id, winner: winnerName, loser: loserName, pot: duel.pot, reason, campaign: !!duel.campaign, round: duel.round || 0, prize: prizeWon, trophy: trophyWon });
+  if (duel.campaign) sysChat(prizeWon ? `🏆 ${winnerName} cleared Campaign Round ${duel.round} and won ${prizeWon} gp${trophyWon ? ' + a TROPHY!' : ''}` : `🏆 ${loserName}'s campaign run ended in Round ${duel.round} — ${winnerName} holds the pit.`);
+  else sysChat(`🏆 ${winnerName} beat ${loserName} and took the ${duel.pot} gp pot!`);
   if (!winnerBot) personalState(winnerName);
   if (!loserBot) personalState(loserName);
   broadcastPlayers();
@@ -287,7 +339,7 @@ wss.on('connection', ws => {
       me = name;
       clients.set(name, { ws, duelId: null });
       const u = db.users[name];
-      send(ws, { type: 'authOk', username: name, gold: u.gold, wins: u.wins, losses: u.losses, owned: u.owned, outfit: u.outfit, outfits: OUTFITS, bots: BOTS, players: playerList() });
+      send(ws, { type: 'authOk', username: name, gold: u.gold, wins: u.wins, losses: u.losses, owned: u.owned, outfit: u.outfit, outfits: OUTFITS, bots: BOTS, players: playerList(), trophies: u.trophies || 0, campaign: campaignOf(u), campaignRounds: campaignInfo() });
       broadcastPlayers();
       sysChat(`${name} entered the lobby.`);
       return;
@@ -330,6 +382,7 @@ wss.on('connection', ws => {
       if (myClient.duelId) return send(ws, { type: 'error', message: 'You are already in a duel.' });
       const botDef = botByName(target) || botById(target);
       if (botDef) {
+        if (botDef.campaignOnly) return send(ws, { type: 'error', message: 'The Arena Champion only fights in a Campaign final — enter in the 🏆 Campaign tab.' });
         if (stake !== botDef.stake) return send(ws, { type: 'error', message: `${botDef.name} fights for ${botDef.stake} gp.` });
         if (myUser.gold < stake) return send(ws, { type: 'error', message: "You can't afford that stake." });
         if (botState[botDef.id].duelId) return send(ws, { type: 'error', message: `${botDef.name} is already fighting.` });
@@ -368,6 +421,37 @@ wss.on('connection', ws => {
       }
       return;
     }
+    if (m.type === 'campaignStart') {
+      campaignOf(myUser);
+      if (myClient.duelId) return send(ws, { type: 'error', message: 'Finish your duel first.' });
+      if (myUser.campaign.active) return send(ws, { type: 'error', message: 'You already have a campaign run going.' });
+      myUser.campaign = { active: true, round: 1, won: [] };
+      saveDbNow(); personalState(me);
+      send(ws, { type: 'campaign', campaign: campaignOf(myUser), trophies: myUser.trophies || 0 });
+      sysChat(`🏆 ${me} entered a Campaign tournament! Round 1: ${botById(CAMPAIGN_ROUNDS[0].botId).name}.`);
+      return;
+    }
+    if (m.type === 'campaignAbandon') {
+      campaignOf(myUser);
+      if (myClient.duelId) return send(ws, { type: 'error', message: 'You are in a duel — forfeit to end the run.' });
+      if (!myUser.campaign.active) return send(ws, { type: 'error', message: 'No campaign run to abandon.' });
+      myUser.campaign.active = false; myUser.campaign.round = 0; // prizes already won stay in gold
+      saveDbNow(); personalState(me);
+      send(ws, { type: 'campaign', campaign: campaignOf(myUser), trophies: myUser.trophies || 0 });
+      return;
+    }
+    if (m.type === 'campaignFight') {
+      campaignOf(myUser);
+      if (!myUser.campaign.active) return send(ws, { type: 'error', message: 'Enter the tournament first.' });
+      if (myClient.duelId) return send(ws, { type: 'error', message: 'You are already in a duel.' });
+      const round = myUser.campaign.round;
+      const def = CAMPAIGN_ROUNDS[round - 1];
+      if (!def) return send(ws, { type: 'error', message: 'That run is finished.' });
+      const botDef = botById(def.botId);
+      if (botState[botDef.id].duelId) return send(ws, { type: 'error', message: `${botDef.name} is already fighting.` });
+      startDuel(me, botDef.name, 0, { campaign: true, round, prize: def.prize });
+      return;
+    }
     if (m.type === 'duelMove') {
       if (!MOVES.includes(m.move)) return;
       const d = myClient.duelId && duels.get(myClient.duelId);
@@ -397,4 +481,4 @@ wss.on('connection', ws => {
 });
 
 server.listen(PORT, () => console.log(`Duelgame Online listening on :${PORT} (db: ${DB_PATH})`));
-module.exports = { _settleById, duels, db, resolveExchange, knockbackFor, applyWalkForward, HOME_GAP, REACH_GAP, BOTS, OUTFITS };
+module.exports = { _settleById, duels, db, resolveExchange, knockbackFor, applyWalkForward, HOME_GAP, REACH_GAP, BOTS, OUTFITS, CAMPAIGN_ROUNDS, campaignInfo };
