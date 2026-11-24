@@ -26,13 +26,12 @@ button:active{transform:scale(.96)}
 
 /* ---------- GAME: 100dvh flex column, page never scrolls ---------- */
 #gameScreen{height:100dvh;display:flex;flex-direction:column;overflow:hidden;background:#0e0b06}
-#topbar{flex:0 0 42px;display:flex;align-items:center;gap:8px;padding:4px 8px;background:linear-gradient(180deg,#2e2410,#1c150a);border-bottom:1px solid var(--line);font-size:14px;z-index:5}
-#topbar .nm{font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:27vw;flex-shrink:1}
+#topbar{flex:0 0 34px;display:flex;align-items:center;gap:7px;padding:2px 8px;background:linear-gradient(180deg,#2e2410,#1c150a);border-bottom:1px solid var(--line);z-index:5}
+#topbar .nm{font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:25vw;flex-shrink:1}
 #topbar span{white-space:nowrap}
-#topbar{font-size:13px}
-#btnForfeit{padding:5px 8px}
+#topbar{font-size:12.5px}
 #topbar .sp{flex:1}
-#topbar button{padding:5px 9px;font-size:12.5px;border-radius:8px}
+#topbar button{padding:3px 7px;font-size:12px;border-radius:7px}
 #btnForfeit{background:linear-gradient(180deg,#7a2020,#571414)}
 #scene{position:relative;flex:1 1 auto;min-height:0;background:linear-gradient(180deg,#1b2748 0%,#4a3b57 45%,#8a5a33 78%,#5c3d1e 100%);overflow:hidden}
 #scene canvas{width:100%!important;height:100%!important;display:block}
@@ -58,7 +57,7 @@ button:active{transform:scale(.96)}
 #hpOverlay{position:absolute;top:6px;left:8px;right:8px;z-index:3;pointer-events:none}
 .hpwrap{display:flex;gap:7px;align-items:center;margin:3px 0;font-size:12.5px}
 .hpwrap .who{width:92px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:700;text-shadow:0 1px 4px #000}
-.hpbar{flex:1;height:15px;background:#2a0808cc;border:1px solid #000;border-radius:8px;overflow:hidden}
+.hpbar{flex:1;height:11px;background:#2a0808cc;border:1px solid #000;border-radius:7px;overflow:hidden}
 .hpfill{height:100%;background:linear-gradient(180deg,#ef5350,#b71c1c);transition:width .35s ease}
 .hpfill.mid{background:linear-gradient(180deg,#ffb74d,#e65100)}
 .hpfill.low{background:linear-gradient(180deg,#ff1744,#b71c1c);animation:lowPulse .5s infinite alternate}
@@ -68,49 +67,55 @@ button:active{transform:scale(.96)}
 .hpnum{width:24px;text-align:right;font-weight:800;text-shadow:0 1px 4px #000}
 
 /* ---------- Bottom: tab panels + tab bar always visible ---------- */
-#bottom{flex:0 0 252px;max-height:38dvh;display:flex;flex-direction:column;background:#171208;border-top:1px solid var(--line)}
+#bottom{flex:0 0 208px;max-height:34dvh;display:flex;flex-direction:column;background:#171208f2;border-top:1px solid var(--line)}
 #tabPanels{flex:1;min-height:0;position:relative}
-.tabPanel{display:none;height:100%;overflow-y:auto;padding:8px 10px;-webkit-overflow-scrolling:touch}
+.tabPanel{display:none;height:100%;overflow-y:auto;padding:6px 8px;-webkit-overflow-scrolling:touch}
 .tabPanel.active{display:block}
 #panel-chat.active{display:flex;flex-direction:column;overflow:hidden}
 #panel-fight.dueling{overflow:hidden}
-#tabbar{flex:0 0 46px;display:flex;gap:4px;padding:5px 6px calc(5px + env(safe-area-inset-bottom));background:#100c06;border-top:1px solid var(--line)}
-#tabbar button{flex:1;min-width:0;padding:6px 1px;font-size:12.5px;font-weight:700;border-radius:9px;color:var(--mut);white-space:nowrap;position:relative}
+#tabbar{flex:0 0 40px;display:flex;gap:3px;padding:4px 5px calc(4px + env(safe-area-inset-bottom));background:#100c06;border-top:1px solid var(--line)}
+#tabbar button{flex:1;min-width:0;padding:5px 0;font-size:11.5px;font-weight:700;border-radius:8px;color:var(--mut);white-space:nowrap;position:relative}
 #onlineBadge{position:absolute;top:1px;right:3px;background:var(--red);color:#fff;font-size:10px;font-weight:800;line-height:15px;min-width:15px;padding:0 4px;border-radius:8px;box-shadow:0 1px 3px #000}
 #tabbar button.on{color:#1c150a;background:linear-gradient(180deg,var(--gold),var(--gold2));border-color:var(--gold)}
 /* duel panel */
-#ticks{text-align:center;font-size:21px;letter-spacing:7px;color:#5c4f33;line-height:1.1}
+#ticks{text-align:center;font-size:17px;letter-spacing:6px;color:#5c4f33;line-height:1.05}
 #ticks .on{color:var(--gold)}
 #ticks .on.t3{color:#ff7043;text-shadow:0 0 12px #ff7043;animation:tickPulse .3s infinite alternate}
 @keyframes tickPulse{from{transform:scale(1)}to{transform:scale(1.3)}}
 #ticks span{display:inline-block}
-#moves{display:flex;gap:8px;margin:6px 0 4px}
-#moves button{flex:1;font-size:17px;font-weight:800;padding:10px 2px;line-height:1.25;border-width:2px}
-#moves button small{font-size:11px;font-weight:600;opacity:.85}
+#moves{display:flex;gap:7px;margin:4px 0 2px}
+#moves button{flex:1;font-size:15.5px;font-weight:800;padding:6px 2px;line-height:1.18;border-width:2px;min-height:54px}
+#moves button small{font-size:10.5px;font-weight:600;opacity:.85}
 #moves button.locked{outline:3px solid var(--gold);outline-offset:1px;animation:lockPulse .45s infinite alternate}
 @keyframes lockPulse{from{filter:brightness(1)}to{filter:brightness(1.45)}}
 #moves button:disabled{opacity:.45}
 #btnAttack{background:linear-gradient(180deg,#8a5a1d,#5f3c10)}
 #btnStrength{background:linear-gradient(180deg,#8c2626,#5c1414)}
 #btnDefence{background:linear-gradient(180deg,#33619e,#1d3d66)}
-#duelStatus{text-align:center;margin:2px 0;font-size:13.5px;min-height:18px}
-.duelHp{font-size:12.5px}
+#duelStatus{text-align:center;margin:1px 0;font-size:12.5px;min-height:16px}
+#duelCampaignLine{text-align:center;font-size:12.5px;font-weight:800;color:var(--gold);margin:0 0 2px}
+.duelHp{font-size:12px}
 /* lobby / bots / shop / chat */
 .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
-.player{display:flex;justify-content:space-between;align-items:center;gap:8px;background:var(--card);border:1px solid #453618;border-radius:10px;padding:7px 9px;margin:5px 0;font-size:13.5px}
-.player button{padding:7px 10px;font-size:13px;white-space:nowrap}
+.player{display:flex;justify-content:space-between;align-items:center;gap:7px;background:var(--card);border:1px solid #453618;border-radius:9px;padding:5px 8px;margin:4px 0;font-size:13px}
+.player button{padding:6px 9px;font-size:12.5px;white-space:nowrap}
 .swatch{display:inline-block;width:14px;height:14px;border-radius:4px;border:1px solid #000;vertical-align:-2px;margin-right:6px}
-.shop{display:grid;grid-template-columns:1fr 1fr;gap:7px}
-.shop .item{background:var(--card);border:1px solid #453618;border-radius:10px;padding:8px;text-align:center;font-size:13px}
-.shop .item button{padding:6px 9px;font-size:12.5px;margin-top:4px}
-h3.sec{margin:2px 0 6px;font-size:15px;color:var(--gold)}
+.shop{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.shop .item{background:var(--card);border:1px solid #453618;border-radius:10px;padding:6px 4px;text-align:center;font-size:12.5px}
+.shop .item.eq{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold2),0 0 14px #c9a22733}
+.shop .item .prev{background:radial-gradient(90% 90% at 50% 20%,#4a3a1c 0%,#241a0d 60%,#171106 100%);border:1px solid #453618;border-radius:8px;padding:4px 0 2px;margin-bottom:3px}
+.shop .item button{padding:5px 8px;font-size:12px;margin-top:3px}
+h3.sec{margin:1px 0 4px;font-size:14px;color:var(--gold)}
+.campRow{display:flex;justify-content:space-between;align-items:center;gap:7px;background:var(--card);border:1px solid #453618;border-radius:9px;padding:5px 8px;margin:4px 0;font-size:13px}
+.campRow.cur{border-color:var(--gold);box-shadow:0 0 10px #c9a22744}
+.campRow.won{opacity:.75}
 #chat{flex:1;min-height:0;overflow-y:auto;font-size:13px;background:#0d0a05;border:1px solid #33270f;border-radius:8px;padding:7px;line-height:1.5}
 #chatRow{display:flex;gap:6px;margin-top:6px}
 #chatRow input{flex:1;background:#0d0a05;color:var(--ink);border:1px solid var(--line);border-radius:9px;padding:9px;font-size:15px;min-width:0}
 select{background:#0d0a05;color:var(--ink);padding:7px;border-radius:8px;border:1px solid var(--line)}
 #challengePop{position:fixed;left:12px;right:12px;bottom:12px;background:#2c2110;border:2px solid var(--gold);border-radius:14px;padding:14px;display:none;z-index:20;text-align:center;box-shadow:0 10px 40px #000}
 #toast{position:fixed;top:48px;left:50%;transform:translateX(-50%);background:#000d;padding:8px 15px;border-radius:20px;display:none;z-index:30;max-width:92vw;text-align:center;font-size:13.5px;border:1px solid var(--line)}
-@media (max-height:760px){ #bottom{flex-basis:224px} #moves button{padding:7px 2px;font-size:16px} #wordBanner{font-size:38px} }
+@media (max-height:760px){ #bottom{flex-basis:192px} #moves button{padding:4px 2px;font-size:14.5px;min-height:50px} #wordBanner{font-size:38px} .tabPanel{padding:5px 7px} }
 </style></head><body>
 
 <div id="toast"></div>
@@ -132,6 +137,7 @@ select{background:#0d0a05;color:var(--ink);padding:7px;border-radius:8px;border:
     <span class="nm" id="meName"></span>
     <span>🪙 <b class="gold" id="meGold">50</b> gp</span>
     <span id="meRecord">0W – 0L</span>
+    <span id="meTrophies" class="hidden">🏆 <b class="gold" id="meTrophyN">0</b></span>
     <span class="sp"></span>
     <button id="btnMute" title="Sound on/off">🔊</button>
     <button id="btnRefill" class="hidden">🆓 +50 gp</button>
@@ -159,6 +165,7 @@ select{background:#0d0a05;color:var(--ink);padding:7px;border-radius:8px;border:
           <div class="row"><button onclick="switchTab('online')">🌐 Challenge a player</button><button onclick="switchTab('bots')">🤖 Practice bot</button></div>
         </div>
         <div id="duelPanel" class="hidden">
+          <p id="duelCampaignLine" class="hidden"></p>
           <div class="hpwrap duelHp" id="wrapA"><span class="who" id="hpALabel"></span><div class="hpbar"><div class="hpfill" id="hpA" style="width:100%"></div></div><b class="hpnum" id="hpAText">30</b></div>
           <div class="hpwrap duelHp" id="wrapB"><span class="who" id="hpBLabel"></span><div class="hpbar"><div class="hpfill" id="hpB" style="width:100%"></div></div><b class="hpnum" id="hpBText">30</b></div>
           <div id="ticks"><span id="t1">●</span><span id="t2">●</span><span id="t3">●</span></div>
@@ -179,8 +186,19 @@ select{background:#0d0a05;color:var(--ink);padding:7px;border-radius:8px;border:
         <h3 class="sec">🤖 Practice bots (no humans needed)</h3>
         <div id="botList"></div>
       </section>
+      <section id="panel-campaign" class="tabPanel">
+        <h3 class="sec">🏆 Campaign — Tournament</h3>
+        <p id="campIntro" style="margin:2px 0 5px;font-size:12.5px;line-height:1.45">FREE entry. 4 rounds vs the pit's best — win prizes each round, lose and the run ends (prizes won are kept). Clear Round 4 to take the <b class="gold">🏆 trophy</b>.</p>
+        <div class="row" style="margin:2px 0 5px">
+          <button id="btnCampStart">🏆 Enter Tournament (free)</button>
+          <button id="btnCampFight" class="hidden">⚔️ Fight Round</button>
+          <button id="btnCampAbandon" class="hidden">🏳️ Abandon run</button>
+        </div>
+        <p id="campStatus" style="margin:2px 0 5px;font-size:12.5px"></p>
+        <div id="campBracket"></div>
+      </section>
       <section id="panel-shop" class="tabPanel">
-        <h3 class="sec">👕 Outfit shop</h3>
+        <h3 class="sec">👕 Outfit shop — see what you wear</h3>
         <div class="shop" id="shop"></div>
       </section>
       <section id="panel-chat" class="tabPanel">
@@ -192,6 +210,7 @@ select{background:#0d0a05;color:var(--ink);padding:7px;border-radius:8px;border:
       <button data-tab="fight" class="on">⚔️ Fight</button>
       <button data-tab="online" id="tabOnlineBtn">🌐 Online<span id="onlineBadge" class="hidden">1</span></button>
       <button data-tab="bots">🤖 Bots</button>
+      <button data-tab="campaign">🏆 Camp</button>
       <button data-tab="shop">👕 Shop</button>
       <button data-tab="chat">💬 Chat</button>
     </nav>
@@ -205,6 +224,9 @@ select{background:#0d0a05;color:var(--ink);padding:7px;border-radius:8px;border:
 
 <script>
 let ws=null, me=null, myOutfits=[], pendingAuth=null, duel=null, lockedMove=null, muted=false, prevHp={a:30,b:30};
+let myCampaign=null, myTrophies=0, myCampaignRounds=[{botId:'pip',name:'Squire Pip',prize:10},{botId:'bram',name:'Hedge Knight Bram',prize:20},{botId:'mara',name:'Pit Dog Mara',prize:40},{botId:'champion',name:'Arena Champion',prize:100}], lastDuelCampaign=false;
+const MOVE_META={attack:{icon:'🗡️',label:'ATTACK',color:'#ffb74d'},strength:{icon:'💪',label:'STRENGTH',color:'#ff7043'},defence:{icon:'🛡️',label:'DEFENCE',color:'#64b5f6'}};
+let histA=[], histB=[];
 const $=id=>document.getElementById(id);
 function toast(t,ms=2600){const e=$('toast');e.textContent=t;e.style.display='block';clearTimeout(e._t);e._t=setTimeout(()=>e.style.display='none',ms);}
 function switchTab(name){
@@ -245,6 +267,7 @@ function handle(m){
   if(m.type==='authErr'){ $('authErr').textContent=m.message; return; }
   if(m.type==='authOk'){
     me=m.username; myOutfits=m.outfits;
+    if(m.campaignRounds) myCampaignRounds=m.campaignRounds;
     $('loginScreen').classList.add('hidden'); $('gameScreen').classList.remove('hidden');
     $('meName').textContent='⚔️ '+me; applyState(m); renderShop(); renderPlayers(m.players); initScene();
     plateNameA=me; plateNameB=null; refreshNameplates(); // lobby: your name over your knight, right plate hidden
@@ -252,6 +275,7 @@ function handle(m){
     return;
   }
   if(m.type==='state'){ applyState(m); return; }
+  if(m.type==='campaign'){ if(m.campaign) myCampaign=m.campaign; if(typeof m.trophies==='number') myTrophies=m.trophies; renderCampaign(); renderTrophies(); return; }
   if(m.type==='players'){ renderPlayers(m.players); return; }
   if(m.type==='error'){ toast(m.message); return; }
   if(m.type==='refillOk'){ toast('🆓 +50 gp refill! Gold: '+m.gold); return; }
@@ -266,7 +290,10 @@ function handle(m){
   }
   if(m.type==='chat'){ const c=$('chat'); c.innerHTML+='<div><b>'+esc(m.from)+':</b> '+esc(m.text)+'</div>'; c.scrollTop=c.scrollHeight; return; }
   if(m.type==='duelStart'){
-    duel={id:m.duelId,a:m.a,b:m.b,pot:m.pot,mine:(me===m.a||me===m.b)}; lockedMove=null; prevHp={a:m.hpA,b:m.hpB};
+    duel={id:m.duelId,a:m.a,b:m.b,pot:m.pot,mine:(me===m.a||me===m.b),campaign:!!m.campaign,round:m.round||0,prize:m.prize||0}; lockedMove=null; prevHp={a:m.hpA,b:m.hpB};
+    lastDuelCampaign=!!m.campaign; histA=[]; histB=[]; clearHitLabels();
+    const cl=$('duelCampaignLine');
+    if(m.campaign){ cl.textContent='🏆 Campaign Round '+m.round+' — '+(me===m.a?m.b:m.a)+' · Prize '+m.prize+' gp'; cl.classList.remove('hidden'); } else cl.classList.add('hidden');
     switchTab('fight');
     $('panel-fight').classList.add('dueling');
     $('lobbyContent').classList.add('hidden'); $('duelPanel').classList.remove('hidden');
@@ -277,7 +304,7 @@ function handle(m){
     setKnightColors(knightA,m.colorsA); setKnightColors(knightB,m.colorsB);
     plateNameA=m.a; plateNameB=m.b; refreshNameplates(); // both fighters' names over their heads (bot name included)
     resetKnightPose();
-    $('duelStatus').textContent='Pot: '+m.pot+' gp — pick your move!';
+    $('duelStatus').textContent=m.campaign?('🏆 Round '+m.round+' — win the '+m.prize+' gp prize! Pick your move!'):('Pot: '+m.pot+' gp — pick your move!');
     document.querySelectorAll('#moves button').forEach(b=>{ b.classList.remove('locked'); b.disabled=!duel.mine; });
     setCamMode('duel');
     return;
@@ -293,6 +320,8 @@ function handle(m){
   if(m.type==='duelTick'){ for(let i=1;i<=3;i++){ const s=$('t'+i); s.className=i<=m.tickInExchange?'on':''; if(i===3&&m.tickInExchange===3) s.classList.add('t3'); } return; }
   if(m.type==='duelExchange'){
     setHp(m.hpA,m.hpB);
+    histA.push(m.moveA); histB.push(m.moveB); if(histA.length>6) histA.shift(); if(histB.length>6) histB.shift();
+    updateHitLabels(m); crowdExcite=1;
     const wb=$('wordBanner'); wb.textContent=m.word; wb.style.color=WORD_COLORS[m.word]||'#fff'; wb.classList.remove('show'); void wb.offsetWidth; wb.classList.add('show');
     animateExchange(m);
     if(m.bDmg>0) splat(false,m.bDmg); if(m.aDmg>0) splat(true,m.aDmg);
@@ -312,15 +341,37 @@ function handle(m){
   }
   if(m.type==='duelEnd'){
     const iWon = m.winner===me;
-    const wb=$('winnerBanner'); wb.innerHTML='👑 WINNER<br>'+esc(m.winner)+' +'+m.pot+' GP'; wb.classList.add('show'); wb.style.display='block';
+    const wb=$('winnerBanner');
+    if(m.campaign){ wb.innerHTML='👑 WINNER<br>'+esc(m.winner)+(m.prize?' +'+m.prize+' GP PRIZE':'')+(m.trophy?'<br>🏆 TROPHY!':''); }
+    else wb.innerHTML='👑 WINNER<br>'+esc(m.winner)+' +'+m.pot+' GP';
+    wb.classList.add('show'); wb.style.display='block';
     showCrown(m.winner===duel?.a); sndWin(); addShake(.25); setCamMode('winner', m.winner===duel?.a);
-    toast(iWon?'🏆 You won '+m.pot+' gp!':(m.winner+' took the '+m.pot+' gp pot.'),4000);
+    if(m.campaign) toast(iWon?('🏆 Round '+(m.round||'')+' cleared! +'+(m.prize||0)+' gp'+(m.trophy?' + TROPHY!':'')):('Campaign run over — '+(m.winner||'')+' took Round '+(m.round||'')+'.'),4200);
+    else toast(iWon?'🏆 You won '+m.pot+' gp!':(m.winner+' took the '+m.pot+' gp pot.'),4000);
     setTimeout(endDuelUI,3500);
     return;
   }
 }
-function endDuelUI(){ duel=null; $('duelPanel').classList.add('hidden'); $('lobbyContent').classList.remove('hidden'); $('panel-fight').classList.remove('dueling'); $('hpOverlay').classList.add('hidden'); $('btnForfeit').classList.add('hidden'); $('countdown').textContent=''; hideCrown(); setCamMode('lobby'); plateNameA=me; plateNameB=null; refreshNameplates(); }
-function applyState(m){ $('meGold').textContent=m.gold; $('meRecord').textContent=m.wins+'W – '+m.losses+'L'; $('btnRefill').classList.toggle('hidden',!(m.gold<5)); window._owned=m.owned; window._outfit=m.outfit; renderShop(); }
+function endDuelUI(){ const wasCampaign=lastDuelCampaign; duel=null; lastDuelCampaign=false; $('duelPanel').classList.add('hidden'); $('duelCampaignLine').classList.add('hidden'); $('lobbyContent').classList.remove('hidden'); $('panel-fight').classList.remove('dueling'); $('hpOverlay').classList.add('hidden'); $('btnForfeit').classList.add('hidden'); $('countdown').textContent=''; hideCrown(); setCamMode('lobby'); plateNameA=me; plateNameB=null; refreshNameplates(); clearHitLabels(); if(wasCampaign) switchTab('campaign'); }
+function renderTrophies(){ $('meTrophyN').textContent=myTrophies; $('meTrophies').classList.toggle('hidden',!(myTrophies>0)); }
+function applyState(m){ $('meGold').textContent=m.gold; $('meRecord').textContent=m.wins+'W – '+m.losses+'L'; $('btnRefill').classList.toggle('hidden',!(m.gold<5)); window._owned=m.owned; window._outfit=m.outfit; if(m.campaign) myCampaign=m.campaign; if(typeof m.trophies==='number') myTrophies=m.trophies; renderTrophies(); renderCampaign(); renderShop(); }
+function renderCampaign(){
+  const el=$('campBracket'); if(!el) return;
+  const c=myCampaign||{active:false,round:0,wonRounds:[]};
+  const won=c.wonRounds||[];
+  el.innerHTML=myCampaignRounds.map((r,i)=>{
+    const n=i+1; const isWon=won.includes(n); const isCur=c.active&&c.round===n;
+    return '<div class="campRow'+(isCur?' cur':isWon?' won':'')+'"><span><span class="swatch" style="background:'+(r.colors?r.colors.armor:'#888')+'"></span><b>R'+n+' · '+esc(r.name)+'</b></span><span>'+(isWon?'✅':isCur?'▶ NOW':'🔒')+' · <b class="gold">'+r.prize+' gp</b>'+(n===4?' + 🏆':'')+'</span></div>';
+  }).join('');
+  $('btnCampStart').classList.toggle('hidden',!!c.active);
+  $('btnCampFight').classList.toggle('hidden',!c.active);
+  $('btnCampAbandon').classList.toggle('hidden',!c.active);
+  if(c.active){ const r=myCampaignRounds[c.round-1]; $('btnCampFight').textContent='⚔️ Fight Round '+c.round+(r?': '+r.name:''); $('campStatus').innerHTML='Run in progress — <b>Round '+c.round+' of 4</b>'+(won.length?(' · won so far: '+won.map(n=>myCampaignRounds[n-1].prize+' gp').join(' + ')):'')+(myTrophies?(' · 🏆×'+myTrophies):''); }
+  else $('campStatus').innerHTML=myTrophies?('🏆 Trophies won: <b class="gold">'+myTrophies+'</b> — enter again to defend the belt!'):'No run in progress.';
+}
+$('btnCampStart').onclick=()=>{ ensureAudio(); send({type:'campaignStart'}); };
+$('btnCampFight').onclick=()=>{ ensureAudio(); send({type:'campaignFight'}); };
+$('btnCampAbandon').onclick=()=>send({type:'campaignAbandon'});
 function fillBar(el,hp){ el.style.width=Math.max(0,hp/30*100)+'%'; el.className='hpfill'+(hp<=10?' low':hp<=18?' mid':''); }
 function setHp(a,b,reset){
   fillBar($('hpA'),a); fillBar($('hpB'),b); fillBar($('ovHpA'),a); fillBar($('ovHpB'),b);
@@ -334,7 +385,7 @@ function esc(s){ const d=document.createElement('div'); d.textContent=String(s);
 
 function renderPlayers(players){
   if(!players) return;
-  const humans=players.filter(p=>!p.isBot), bots=players.filter(p=>p.isBot);
+  const humans=players.filter(p=>!p.isBot), bots=players.filter(p=>p.isBot&&!p.campaignOnly);
   // Online tab: header count (real humans only, includes you) + tab badge
   const oc=$('onlineCount'); if(oc) oc.textContent=humans.length;
   const badge=$('onlineBadge'); if(badge){ badge.textContent=humans.length; badge.classList.toggle('hidden',humans.length<1); }
@@ -349,13 +400,32 @@ function renderPlayers(players){
 window.challenge=name=>send({type:'challenge',target:name,stake:Number($('stakeSel').value)});
 window.challengeBot=(name,stake)=>send({type:'challenge',target:name,stake});
 
+function knightSVG(o){
+  const c=o.colors;
+  return '<svg width="92" height="104" viewBox="0 0 92 104" aria-label="'+esc(o.name)+' preview">'
+  +'<polygon points="46,2 40,16 52,16" fill="'+c.plume+'"/>' // plume
+  +'<rect x="33" y="13" width="26" height="17" rx="6" fill="'+c.trim+'"/>' // helm
+  +'<rect x="38" y="22" width="16" height="4" rx="2" fill="#101010"/>' // visor slit
+  +'<polygon points="46,30 28,38 32,66 60,66 64,38" fill="'+c.armor+'"/>' // torso (broad chest)
+  +'<rect x="30" y="50" width="32" height="4" fill="'+c.trim+'" opacity=".65"/>' // chest band
+  +'<rect x="20" y="38" width="9" height="26" rx="4" fill="'+c.armor+'"/>' // left arm
+  +'<rect x="63" y="38" width="9" height="26" rx="4" fill="'+c.armor+'"/>' // right arm
+  +'<rect x="10" y="42" width="17" height="26" rx="5" fill="'+c.shield+'"/>' // shield
+  +'<rect x="17" y="44" width="3.5" height="22" fill="'+c.trim+'"/><rect x="11" y="53" width="15" height="3.5" fill="'+c.trim+'"/>'
+  +'<line x1="72" y1="62" x2="86" y2="30" stroke="#eaf2fc" stroke-width="4" stroke-linecap="round"/>' // sword blade
+  +'<line x1="68" y1="60" x2="76" y2="64" stroke="#c9a227" stroke-width="4" stroke-linecap="round"/>' // crossguard
+  +'<rect x="35" y="66" width="9" height="22" rx="3" fill="'+c.trim+'"/><rect x="49" y="66" width="9" height="22" rx="3" fill="'+c.trim+'"/>' // legs
+  +'<rect x="33" y="88" width="12" height="6" rx="2" fill="#3a2a16"/><rect x="48" y="88" width="12" height="6" rx="2" fill="#3a2a16"/>' // boots
+  +'</svg>';
+}
 function renderShop(){
   if(!myOutfits.length) return;
   $('shop').innerHTML=myOutfits.map(o=>{
     const owned=(window._owned||[]).includes(o.id), eq=window._outfit===o.id;
-    return '<div class="item"><span class="swatch" style="background:'+o.colors.armor+'"></span><b>'+esc(o.name)+'</b><br><small>'+esc(o.blurb)+'</small><br>'+(eq?'✅ Equipped':owned?'<button onclick="equip(\''+o.id+'\')">Wear</button>':'<button onclick="buy(\''+o.id+'\')">'+o.price+' gp — Buy</button>')+'</div>';
+    return '<div class="item'+(eq?' eq':'')+'"><div class="prev">'+knightSVG(o)+'</div><b>'+esc(o.name)+'</b><br>'+(eq?'✅ Equipped':owned?'<button onclick="equip(\''+o.id+'\')">Wear it</button>':'<button onclick="buy(\''+o.id+'\')">🪙 '+o.price+' gp — Buy</button>')+'</div>';
   }).join('');
 }
+window._shopPreviewCount=()=>document.querySelectorAll('#shop .item svg').length;
 window.buy=id=>send({type:'buy',outfitId:id});
 window.equip=id=>send({type:'equip',outfitId:id});
 
@@ -375,7 +445,7 @@ function splat(leftSide,dmg){
 
 // ================= 3D PIT =================
 let knightA=null, knightB=null, crown=null, sceneReady=false, renderer3=null, camera3=null, scene3=null;
-let shakeAmt=0, camMode='lobby', camWinnerA=true, torchLights=[], flames=[], crowd=[], banners=[], dustPts=null, sparks=null, crownDrop=-1, pitSpot=null, spotPulse=0;
+let shakeAmt=0, camMode='lobby', camWinnerA=true, torchLights=[], flames=[], crowd=[], crowdArms=[], banners=[], pennants=[], dustPts=null, smokePts=null, emberPts=null, sparks=null, crownDrop=-1, pitSpot=null, spotPulse=0;
 /* ---- Nameplates: camera-facing canvas sprites over each knight's head ---- */
 let plateA=null, plateB=null, plateNameA=null, plateNameB=null;
 const PLATE_Y=3.55, PLATE_Y_WIN=4.05;
@@ -409,6 +479,52 @@ function setPlate(plate,name){
 function refreshNameplates(){ setPlate(plateA,plateNameA); setPlate(plateB,plateNameB); }
 function liftPlates(up){ [plateA,plateB].forEach(p=>{ if(p) p.sprite.position.y=up?PLATE_Y_WIN:PLATE_Y; }); }
 window._plates=()=>({a:plateA?plateA.name:null,b:plateB?plateB.name:null,aVisible:!!(plateA&&plateA.sprite.visible),bVisible:!!(plateB&&plateB.sprite.visible)});
+/* ---- Hit labels: each fighter's LAST move (+ damage dealt) under their nameplate,
+        with a last-3-moves icon history so patterns are readable. Canvas sprites
+        parented to the knights, so they track lunges/knockback/walk-forward. ---- */
+let hitA=null, hitB=null, crowdExcite=0;
+function makeHitLabel(){
+  const canvas=document.createElement('canvas'); canvas.width=512; canvas.height=176;
+  const tex=new THREE.CanvasTexture(canvas); tex.minFilter=THREE.LinearFilter;
+  const sprite=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,transparent:true,depthWrite:false}));
+  sprite.scale.set(2.35,.81,1); sprite.position.set(0,2.92,.7); sprite.renderOrder=9; sprite.visible=false;
+  return {sprite,canvas,tex,text:null,hist:[]};
+}
+function drawHitLabel(lab,move,dealt,won,word,hist){
+  const g=lab.canvas.getContext('2d'); g.clearRect(0,0,512,176);
+  const meta=MOVE_META[move]||MOVE_META.attack;
+  let main=meta.icon+' '+meta.label+(won&&word?' '+word:'')+(dealt>0?' −'+dealt:'');
+  let size=54; g.textAlign='center'; g.textBaseline='middle';
+  const setF=()=>{ g.font='900 '+size+'px system-ui,-apple-system,"Segoe UI",sans-serif'; };
+  setF(); while(g.measureText(main).width>452 && size>28){ size-=4; setF(); }
+  const tw=g.measureText(main).width, pw=Math.min(496,tw+48), px=(512-pw)/2;
+  roundRectPath(g,px,8,pw,74,34);
+  g.fillStyle='rgba(10,8,4,.78)'; g.fill(); g.lineWidth=4; g.strokeStyle=meta.color; g.stroke();
+  g.lineWidth=8; g.strokeStyle='#000'; g.lineJoin='round'; g.strokeText(main,256,46);
+  g.fillStyle=meta.color; g.fillText(main,256,46);
+  const h=(hist||[]).slice(-3);
+  if(h.length){
+    const hw=h.length*52+22, hx=(512-hw)/2;
+    roundRectPath(g,hx,96,hw,58,26);
+    g.fillStyle='rgba(10,8,4,.68)'; g.fill(); g.lineWidth=3; g.strokeStyle='rgba(247,221,122,.55)'; g.stroke();
+    g.font='34px system-ui'; h.forEach((mv,i)=>{ g.globalAlpha=i===h.length-1?1:.45+(i*.22); g.fillText((MOVE_META[mv]||{}).icon||'?', hx+36+i*52, 126); });
+    g.globalAlpha=1;
+  }
+  lab.tex.needsUpdate=true; lab.text=main; lab.hist=h;
+}
+function setHitLabel(lab,move,dealt,won,word,hist){
+  if(!lab) return;
+  if(!move){ lab.sprite.visible=false; lab.text=null; lab.hist=[]; return; }
+  drawHitLabel(lab,move,dealt,won,word,hist);
+  lab.sprite.visible=true;
+}
+function updateHitLabels(m){
+  // A dealt bDmg to B; B dealt aDmg to A. Result word belongs to the winner (both on clash).
+  setHitLabel(hitA,m.moveA,m.bDmg,m.winnerSide==='a'||m.winnerSide==='clash',m.word,histA);
+  setHitLabel(hitB,m.moveB,m.aDmg,m.winnerSide==='b'||m.winnerSide==='clash',m.word,histB);
+}
+function clearHitLabels(){ setHitLabel(hitA,null); setHitLabel(hitB,null); }
+window._hitLabels=()=>({a:hitA?hitA.text:null,b:hitB?hitB.text:null,aVisible:!!(hitA&&hitA.sprite.visible),bVisible:!!(hitB&&hitB.sprite.visible),histA:[...histA],histB:[...histB]});
 function addShake(v){ shakeAmt=Math.min(.8,Math.max(shakeAmt,v)); }
 function setCamMode(mode,winnerA){ camMode=mode; if(winnerA!==undefined) camWinnerA=winnerA; }
 
@@ -432,7 +548,8 @@ const metalTex=()=>canvasTex((g,w,h)=>{ g.fillStyle='#f5f5f5'; g.fillRect(0,0,w,
 const bladeTex=()=>canvasTex((g,w,h)=>{ g.fillStyle='#fbfbfb'; g.fillRect(0,0,w,h); for(let x=0;x<w;x+=2){ g.fillStyle='#0000000a'; g.fillRect(x,0,1,h);} g.fillStyle='#00000026'; g.fillRect(w/2-3,0,6,h); g.fillStyle='#ffffff88'; g.fillRect(w/2-8,0,2,h); g.fillRect(w/2+6,0,2,h); },64,256,1,1);
 const blobTex=()=>canvasTex((g,w,h)=>{ const gr=g.createRadialGradient(w/2,h/2,6,w/2,h/2,w/2); gr.addColorStop(0,'#000000'); gr.addColorStop(.65,'#000000aa'); gr.addColorStop(1,'#00000000'); g.fillStyle=gr; g.fillRect(0,0,w,h); },128,128);
 const bannerTex=()=>canvasTex((g,w,h)=>{ g.fillStyle='#8c1f28'; g.fillRect(0,0,w,h); g.fillStyle='#6e141d'; g.fillRect(0,0,w,10); g.fillRect(0,h-10,w,10); g.strokeStyle='#f7dd7a'; g.lineWidth=5; g.beginPath(); g.moveTo(28,28); g.lineTo(w-28,h-28); g.moveTo(w-28,28); g.lineTo(28,h-28); g.stroke(); g.fillStyle='#f7dd7a'; g.beginPath(); g.arc(w/2,h/2,11,0,7); g.fill(); for(let y=0;y<h;y+=3){ g.fillStyle='#00000014'; g.fillRect(0,y,w,1);} for(let x=0;x<w;x+=3){ g.fillStyle='#00000010'; g.fillRect(x,0,1,h);} },128,192);
-const skyTex=()=>canvasTex((g,w,h)=>{ const gr=g.createLinearGradient(0,0,0,h); gr.addColorStop(0,'#131f3d'); gr.addColorStop(.45,'#3d3a5e'); gr.addColorStop(.72,'#a35c2e'); gr.addColorStop(1,'#d98d43'); g.fillStyle=gr; g.fillRect(0,0,w,h); for(let i=0;i<140;i++){ g.fillStyle='#ffffff'; g.globalAlpha=Math.random()*.65; const s=Math.random()<.85?2:3; g.fillRect(Math.random()*w,Math.random()*h*.38,s,s);} g.globalAlpha=1; },512,512);
+const skyTex=()=>canvasTex((g,w,h)=>{ const gr=g.createLinearGradient(0,0,0,h); gr.addColorStop(0,'#131f3d'); gr.addColorStop(.45,'#3d3a5e'); gr.addColorStop(.72,'#a35c2e'); gr.addColorStop(1,'#d98d43'); g.fillStyle=gr; g.fillRect(0,0,w,h); for(let i=0;i<140;i++){ g.fillStyle='#ffffff'; g.globalAlpha=Math.random()*.65; const s=Math.random()<.85?2:3; g.fillRect(Math.random()*w,Math.random()*h*.38,s,s);} g.globalAlpha=1; // cloud bands: soft horizontal ellipses in the dusk band
+  for(let i=0;i<9;i++){ const cy=h*(.3+Math.random()*.3), cx=Math.random()*w, cw=70+Math.random()*130; const cg=g.createRadialGradient(cx,cy,4,cx,cy,cw); cg.addColorStop(0,'rgba(255,205,160,.34)'); cg.addColorStop(1,'rgba(255,205,160,0)'); g.fillStyle=cg; g.save(); g.translate(cx,cy); g.scale(1,.22); g.translate(-cx,-cy); g.beginPath(); g.arc(cx,cy,cw,0,7); g.fill(); g.restore(); } },512,512);
 
 function std(color,rough,metal,extra){ return new THREE.MeshStandardMaterial(Object.assign({color,roughness:rough==null?.7:rough,metalness:metal==null?.15:metal},extra||{})); }
 /* ---- Jointed knight rig: shoulder -> elbow -> wrist -> sword (gripped by the hilt).
@@ -489,38 +606,43 @@ function makeKnight(colors){
   const metalT=metalTex(), clothT=clothTex(), leatherT=leatherTex(), bladeT=bladeTex();
   const M={ armor:std(colors.armor,.38,.75,{map:metalT,bumpMap:metalT,bumpScale:.012}), trim:std(colors.trim,.5,.6,{map:metalT,bumpMap:metalT,bumpScale:.01}), plume:std(colors.plume,.95,0,{map:clothT,bumpMap:clothT,bumpScale:.015}), shield:std(colors.shield,.42,.65,{map:metalT,bumpMap:metalT,bumpScale:.012}), steel:std(0xeaf2fc,.16,.96,{map:bladeT,bumpMap:bladeT,bumpScale:.005}), leather:std(0xffffff,.88,0,{map:leatherT,bumpMap:leatherT,bumpScale:.02}), gold:std(0xf7dd7a,.28,.9) };
   const add=(mesh,x,y,z,parent)=>{ mesh.position.set(x,y,z); (parent||g).add(mesh); return mesh; };
-  // legs: thigh + shin + leather boot (hip pivots at y .95)
-  const legL=new THREE.Group(); legL.position.set(-0.24,0.95,0); g.add(legL);
-  add(new THREE.Mesh(new THREE.CylinderGeometry(.15,.12,.5,6),M.trim),0,-.25,0,legL);
-  add(new THREE.Mesh(new THREE.CylinderGeometry(.11,.09,.42,6),M.armor),0,-.68,0,legL);
-  add(new THREE.Mesh(new THREE.BoxGeometry(.2,.12,.36),M.leather),0,-.92,.06,legL);
-  const legR=new THREE.Group(); legR.position.set(0.24,0.95,0); g.add(legR);
-  add(new THREE.Mesh(new THREE.CylinderGeometry(.15,.12,.5,6),M.trim),0,-.25,0,legR);
-  add(new THREE.Mesh(new THREE.CylinderGeometry(.11,.09,.42,6),M.armor),0,-.68,0,legR);
-  add(new THREE.Mesh(new THREE.BoxGeometry(.2,.12,.36),M.leather),0,-.92,.06,legR);
-  // torso group (pivot at hips, y=1.0): twist + lean drive the swing's body
+  // legs: thick thigh + shin + leather boot, wider stance (hip pivots at y .95)
+  const legL=new THREE.Group(); legL.position.set(-0.31,0.95,0); g.add(legL);
+  add(new THREE.Mesh(new THREE.CylinderGeometry(.2,.16,.52,6),M.trim),0,-.26,0,legL);
+  add(new THREE.Mesh(new THREE.CylinderGeometry(.15,.12,.44,6),M.armor),0,-.7,0,legL);
+  add(new THREE.Mesh(new THREE.BoxGeometry(.26,.14,.44),M.leather),0,-.93,.07,legL);
+  const legR=new THREE.Group(); legR.position.set(0.31,0.95,0); g.add(legR);
+  add(new THREE.Mesh(new THREE.CylinderGeometry(.2,.16,.52,6),M.trim),0,-.26,0,legR);
+  add(new THREE.Mesh(new THREE.CylinderGeometry(.15,.12,.44,6),M.armor),0,-.7,0,legR);
+  add(new THREE.Mesh(new THREE.BoxGeometry(.26,.14,.44),M.leather),0,-.93,.07,legR);
+  // torso group (pivot at hips, y=1.0): twist + lean drive the swing's body. BULKY: broad chest/shoulders, deep plate.
   const torsoG=new THREE.Group(); torsoG.position.set(0,1,0); g.add(torsoG);
-  add(new THREE.Mesh(new THREE.CylinderGeometry(.3,.26,.3,8),M.trim),0,.08,0,torsoG); // pelvis
-  add(new THREE.Mesh(new THREE.CylinderGeometry(.3,.42,.72,8),M.armor),0,.58,0,torsoG); // tapered chest
-  const belt=add(new THREE.Mesh(new THREE.TorusGeometry(.33,.05,6,12),M.leather),0,.24,0,torsoG); belt.rotation.x=Math.PI/2;
-  add(new THREE.Mesh(new THREE.BoxGeometry(.13,.11,.05),M.gold),0,.24,.32,torsoG); // buckle
-  add(new THREE.Mesh(new THREE.SphereGeometry(.17,8,6),M.armor),-0.5,.86,0,torsoG); // pauldrons
-  add(new THREE.Mesh(new THREE.SphereGeometry(.17,8,6),M.armor),0.5,.86,0,torsoG);
-  const cape=add(new THREE.Mesh(new THREE.PlaneGeometry(.78,1.25),new THREE.MeshStandardMaterial({color:colors.trim,roughness:.95,side:THREE.DoubleSide,map:clothT,bumpMap:clothT,bumpScale:.015})),0,.35,-0.3,torsoG); cape.rotation.x=.12;
+  add(new THREE.Mesh(new THREE.CylinderGeometry(.38,.33,.32,8),M.trim),0,.08,0,torsoG); // pelvis
+  const chest=add(new THREE.Mesh(new THREE.CylinderGeometry(.55,.37,.78,8),M.armor),0,.6,0,torsoG); chest.scale.z=1.18; // broader at the top, deeper chest plate
+  const belt=add(new THREE.Mesh(new THREE.TorusGeometry(.4,.06,6,12),M.leather),0,.24,0,torsoG); belt.rotation.x=Math.PI/2;
+  add(new THREE.Mesh(new THREE.BoxGeometry(.15,.12,.06),M.gold),0,.24,.38,torsoG); // buckle
+  add(new THREE.Mesh(new THREE.SphereGeometry(.24,8,6),M.armor),-0.62,.9,0,torsoG); // wide pauldrons
+  add(new THREE.Mesh(new THREE.SphereGeometry(.24,8,6),M.armor),0.62,.9,0,torsoG);
+  // scabbard on the left hip (leather, gold tip), angled like a worn sheath
+  const scab=add(new THREE.Group(),-0.42,.18,-0.06,torsoG); scab.rotation.z=.45; scab.rotation.x=.12;
+  add(new THREE.Mesh(new THREE.BoxGeometry(.11,.58,.15),M.leather),0,-.24,0,scab);
+  add(new THREE.Mesh(new THREE.ConeGeometry(.07,.14,4),M.gold),0,-.58,0,scab);
+  const cape=add(new THREE.Mesh(new THREE.PlaneGeometry(.95,1.3),new THREE.MeshStandardMaterial({color:colors.trim,roughness:.95,side:THREE.DoubleSide,map:clothT,bumpMap:clothT,bumpScale:.015})),0,.35,-0.36,torsoG); cape.rotation.x=.12;
+  add(new THREE.Mesh(new THREE.BoxGeometry(.95,.06,.02),M.gold),0,-.28,-0.37,torsoG).rotation.x=.12; // cape gold edge trim
   // head: helm dome + brim + visor + plume
-  const headG=new THREE.Group(); headG.position.set(0,1.18,0); torsoG.add(headG);
-  add(new THREE.Mesh(new THREE.CylinderGeometry(.24,.27,.34,8),M.trim),0,0,0,headG);
-  add(new THREE.Mesh(new THREE.SphereGeometry(.25,8,6,0,Math.PI*2,0,Math.PI/2),M.trim),0,.14,0,headG);
+  const headG=new THREE.Group(); headG.position.set(0,1.22,0); torsoG.add(headG);
+  add(new THREE.Mesh(new THREE.CylinderGeometry(.27,.3,.36,8),M.trim),0,0,0,headG);
+  add(new THREE.Mesh(new THREE.SphereGeometry(.28,8,6,0,Math.PI*2,0,Math.PI/2),M.trim),0,.15,0,headG);
   add(new THREE.Mesh(new THREE.BoxGeometry(.5,.07,.5),M.gold),0,-.14,0,headG);
   add(new THREE.Mesh(new THREE.BoxGeometry(.3,.09,.06),M.leather),0,-.02,.24,headG);
   const plume=add(new THREE.Mesh(new THREE.ConeGeometry(.11,.5,6),M.plume),0,.48,-.04,headG); plume.rotation.x=-.25;
   // RIGHT ARM chain: shoulder -> upper arm -> elbow -> forearm -> wrist -> hand -> sword
-  const shR=new THREE.Group(); shR.position.set(.58,.84,0); torsoG.add(shR);
-  add(new THREE.Mesh(new THREE.CylinderGeometry(.1,.09,.48,6),M.armor),0,-.24,0,shR);
-  const elR=new THREE.Group(); elR.position.set(0,-.48,0); shR.add(elR);
-  add(new THREE.Mesh(new THREE.CylinderGeometry(.085,.075,.4,6),M.armor),0,-.2,0,elR);
-  const wrR=new THREE.Group(); wrR.position.set(0,-.44,0); elR.add(wrR);
-  add(new THREE.Mesh(new THREE.SphereGeometry(.095,7,6),M.leather),0,-.03,0,wrR); // gloved hand on the grip
+  const shR=new THREE.Group(); shR.position.set(.7,.88,0); torsoG.add(shR);
+  add(new THREE.Mesh(new THREE.CylinderGeometry(.145,.12,.52,6),M.armor),0,-.26,0,shR);
+  const elR=new THREE.Group(); elR.position.set(0,-.52,0); shR.add(elR);
+  add(new THREE.Mesh(new THREE.CylinderGeometry(.12,.105,.44,6),M.armor),0,-.22,0,elR);
+  const wrR=new THREE.Group(); wrR.position.set(0,-.48,0); elR.add(wrR);
+  add(new THREE.Mesh(new THREE.SphereGeometry(.12,7,6),M.leather),0,-.03,0,wrR); // gloved hand on the grip
   const sword=new THREE.Group(); sword.position.set(0,-.05,0); wrR.add(sword);
   add(new THREE.Mesh(new THREE.CylinderGeometry(.035,.035,.24,6),M.leather),0,-.1,0,sword); // hilt grip (in the fist)
   add(new THREE.Mesh(new THREE.BoxGeometry(.3,.05,.07),M.gold),0,-.24,0,sword); // crossguard
@@ -530,16 +652,16 @@ function makeKnight(colors){
   const bladeBase=new THREE.Object3D(); bladeBase.position.set(0,-.3,0); sword.add(bladeBase);
   const tip=new THREE.Object3D(); tip.position.set(0,-1.5,0); sword.add(tip);
   // LEFT ARM chain: shoulder -> elbow -> shield strapped to the forearm
-  const shL=new THREE.Group(); shL.position.set(-.58,.84,0); torsoG.add(shL);
-  add(new THREE.Mesh(new THREE.CylinderGeometry(.1,.09,.48,6),M.armor),0,-.24,0,shL);
-  const elL=new THREE.Group(); elL.position.set(0,-.48,0); shL.add(elL);
-  add(new THREE.Mesh(new THREE.CylinderGeometry(.085,.075,.4,6),M.armor),0,-.2,0,elL);
-  add(new THREE.Mesh(new THREE.SphereGeometry(.09,6,5),M.leather),0,-.44,0,elL);
-  const shieldG=new THREE.Group(); shieldG.position.set(-.14,-.34,0); elL.add(shieldG);
-  add(new THREE.Mesh(new THREE.BoxGeometry(.09,.95,.72),M.shield),0,0,0,shieldG);
-  add(new THREE.Mesh(new THREE.BoxGeometry(.03,.95,.1),M.gold),-.06,0,0,shieldG);
-  add(new THREE.Mesh(new THREE.BoxGeometry(.03,.1,.72),M.gold),-.06,0,0,shieldG);
-  add(new THREE.Mesh(new THREE.SphereGeometry(.09,8,6),M.gold),-.08,0,0,shieldG);
+  const shL=new THREE.Group(); shL.position.set(-.7,.88,0); torsoG.add(shL);
+  add(new THREE.Mesh(new THREE.CylinderGeometry(.145,.12,.52,6),M.armor),0,-.26,0,shL);
+  const elL=new THREE.Group(); elL.position.set(0,-.52,0); shL.add(elL);
+  add(new THREE.Mesh(new THREE.CylinderGeometry(.12,.105,.44,6),M.armor),0,-.22,0,elL);
+  add(new THREE.Mesh(new THREE.SphereGeometry(.11,6,5),M.leather),0,-.48,0,elL);
+  const shieldG=new THREE.Group(); shieldG.position.set(-.16,-.38,0); elL.add(shieldG);
+  add(new THREE.Mesh(new THREE.BoxGeometry(.11,1.18,.9),M.shield),0,0,0,shieldG); // bigger shield
+  add(new THREE.Mesh(new THREE.BoxGeometry(.03,1.18,.12),M.gold),-.07,0,0,shieldG);
+  add(new THREE.Mesh(new THREE.BoxGeometry(.03,.12,.9),M.gold),-.07,0,0,shieldG);
+  add(new THREE.Mesh(new THREE.SphereGeometry(.12,8,6),M.gold),-.09,0,0,shieldG); // shield boss / outfit emblem
   g.userData={torsoG,headG,shR,elR,wrR,shL,elL,shieldG,legL,legR,cape,tip,bladeBase,mats:{armor:M.armor,trim:M.trim,plume:M.plume,shield:M.shield},baseX:0,facing:1,blob:null,trail:null,dispPos:0,dispAnim:null,walkPhase:0,anim:{swing:null,knock:-1,knockDir:1}};
   // ready guard stance
   shR.rotation.set(GUARD.shX,0,GUARD.shZ); elR.rotation.x=GUARD.elX; wrR.rotation.x=GUARD.wrX;
@@ -547,7 +669,7 @@ function makeKnight(colors){
   return g;
 }
 function setKnightColors(k,colors){ if(!k||!colors) return; const m=k.userData.mats; m.armor.color.set(colors.armor); m.trim.color.set(colors.trim); m.plume.color.set(colors.plume); m.shield.color.set(colors.shield); if(k.userData.cape) k.userData.cape.material.color.set(colors.trim); }
-function applyGuardPose(k){ const u=k.userData; u.shR.rotation.set(GUARD.shX,0,GUARD.shZ); u.elR.rotation.x=GUARD.elX; u.wrR.rotation.x=GUARD.wrX; u.shL.rotation.x=-.4; u.elL.rotation.x=-.55; u.shieldG.position.set(-.14,-.34,0); u.torsoG.rotation.set(0,0,0); u.headG.rotation.set(0,0,0); }
+function applyGuardPose(k){ const u=k.userData; u.shR.rotation.set(GUARD.shX,0,GUARD.shZ); u.elR.rotation.x=GUARD.elX; u.wrR.rotation.x=GUARD.wrX; u.shL.rotation.x=-.4; u.elL.rotation.x=-.55; u.shieldG.position.set(-.16,-.38,0); u.torsoG.rotation.set(0,0,0); u.headG.rotation.set(0,0,0); }
 /* ---- Reach / knockback stance (mirrors the server's duel layer) ----
    Home stance is x ±HOME_X (gap 3.1). A fighter can hit while the gap is
    <= REACH_GAP (3.4), i.e. combined displacement <= 0.3. Taking a hit slides
@@ -635,7 +757,7 @@ function initScene(){
   // tiered stands all around + crowd silhouettes
   const stoneM=new THREE.MeshStandardMaterial({map:stoneT,bumpMap:stoneT,bumpScale:.04,roughness:.9});
   for(let tier=0;tier<3;tier++){ const r=9.6+tier*1.15; const h=.55+tier*.62; const seg=new THREE.Mesh(new THREE.CylinderGeometry(r,r,h,36,1,true),stoneM); seg.position.y=h/2; seg.receiveShadow=true; scene.add(seg); const lip=new THREE.Mesh(new THREE.RingGeometry(r-.55,r+.05,36),stoneM); lip.rotation.x=-Math.PI/2; lip.position.y=h; lip.receiveShadow=true; scene.add(lip);
-    for(let i=0;i<26;i++){ if(Math.random()<.22) continue; const a=Math.random()*Math.PI*2; if(Math.sin(a)>.72&&tier<2) continue; const cm=new THREE.MeshStandardMaterial({color:[0x8a4a3a,0x3a5a7a,0x6a7a3a,0x9a8a6a,0x5a3a6a,0xb08a4a][i%6],roughness:.9}); const person=new THREE.Group(); const bd=new THREE.Mesh(new THREE.CylinderGeometry(.14,.17,.44,5),cm); bd.position.y=.22; person.add(bd); const hd=new THREE.Mesh(new THREE.SphereGeometry(.13,6,5),std(0xc9a586,.8,0)); hd.position.y=.56; person.add(hd); person.position.set(Math.cos(a)*r,h,Math.sin(a)*r); person.userData.ph=Math.random()*7; crowd.push(person); scene.add(person); } }
+    for(let i=0;i<26;i++){ if(Math.random()<.22) continue; const a=Math.random()*Math.PI*2; if(Math.sin(a)>.72&&tier<2) continue; const cm=new THREE.MeshStandardMaterial({color:[0x8a4a3a,0x3a5a7a,0x6a7a3a,0x9a8a6a,0x5a3a6a,0xb08a4a][i%6],roughness:.9}); const person=new THREE.Group(); const bd=new THREE.Mesh(new THREE.CylinderGeometry(.14,.17,.44,5),cm); bd.position.y=.22; person.add(bd); const hd=new THREE.Mesh(new THREE.SphereGeometry(.13,6,5),std(0xc9a586,.8,0)); hd.position.y=.56; person.add(hd); if(i%3===0){ [-1,1].forEach(s=>{ const arm=new THREE.Mesh(new THREE.CylinderGeometry(.04,.04,.34,4),cm); arm.position.set(s*.18,.48,0); arm.rotation.z=s*2.6; person.add(arm); crowdArms.push({arm,ph:Math.random()*7,side:s}); }); } person.position.set(Math.cos(a)*r,h,Math.sin(a)*r); person.userData.ph=Math.random()*7; crowd.push(person); scene.add(person); } }
   // back wall + two towers + wooden gate doors (plank texture) in the wall centre
   const wall=new THREE.Mesh(new THREE.BoxGeometry(26,3.4,.8),stoneM); wall.position.set(0,1.7,-11.5); wall.receiveShadow=true; scene.add(wall);
   const woodM=new THREE.MeshStandardMaterial({map:woodTex(),bumpMap:woodTex(),bumpScale:.03,roughness:.9});
@@ -650,6 +772,41 @@ function initScene(){
     const flame=new THREE.Mesh(new THREE.ConeGeometry(.3,.85,7),new THREE.MeshStandardMaterial({color:0xff8c2e,emissive:0xff6a00,emissiveIntensity:1.6,roughness:1})); flame.position.set(p[0],2.75,p[1]); flames.push(flame); scene.add(flame);
     const li=new THREE.PointLight(0xff9040,1.05+(ti%3)*.18,13,1.6); li.position.set(p[0],2.9,p[1]); li.userData={base:li.intensity,ph:ti*2.37,sp:10+ti*1.7}; torchLights.push(li); scene.add(li);
   });
+  // ---- pit-edge dressing: portcullis on the gate, banner fringe, tower pennants,
+  // weapon rack, barrels, a brazier, scattered stones + grass tufts outside the ring ----
+  for(let i=0;i<6;i++){ const bar=new THREE.Mesh(new THREE.BoxGeometry(.09,3.0,.09),std(0x242428,.45,.8)); bar.position.set(-1.6+i*.64,1.55,-10.9); scene.add(bar); }
+  [-0.9,0.9].forEach(y=>{ const hb=new THREE.Mesh(new THREE.BoxGeometry(4.4,.1,.08),std(0x242428,.45,.8)); hb.position.set(0,1.55+y,-10.9); scene.add(hb); });
+  banners.forEach(b=>{ const fr=new THREE.Mesh(new THREE.BoxGeometry(1.7,.14,.03),std(0xf7dd7a,.35,.85)); fr.position.set(0,-1.36,0); b.add(fr); const tp=new THREE.Mesh(new THREE.BoxGeometry(1.7,.1,.03),std(0xf7dd7a,.35,.85)); tp.position.set(0,1.32,0); b.add(tp); });
+  [-11,11].forEach((x,ti)=>{ const pole=new THREE.Mesh(new THREE.CylinderGeometry(.04,.04,1.7,5),woodM); pole.position.set(x,7.9,-11.5); scene.add(pole);
+    const flagGeo=new THREE.BufferGeometry(); flagGeo.setAttribute('position',new THREE.BufferAttribute(new Float32Array([0,0,0, 1.15,-.14,0, 0,-.42,0]),3)); flagGeo.setIndex([0,1,2]); flagGeo.computeVertexNormals();
+    const flag=new THREE.Mesh(flagGeo,new THREE.MeshStandardMaterial({color:ti?0x2e5a9e:0x8c1f28,side:THREE.DoubleSide,roughness:.9})); flag.position.set(x,8.62,-11.5); flag.userData.ph=ti*2.2; pennants.push(flag); scene.add(flag); });
+  { // weapon rack: frame + 3 spare swords, at the ring's edge
+    const rack=new THREE.Group(); rack.position.set(6.9,0,3.4); rack.rotation.y=-.7;
+    const post1=new THREE.Mesh(new THREE.BoxGeometry(.12,1.3,.12),woodM); post1.position.set(-.8,.65,0); rack.add(post1);
+    const post2=post1.clone(); post2.position.x=.8; rack.add(post2);
+    const cross=new THREE.Mesh(new THREE.BoxGeometry(1.8,.12,.12),woodM); cross.position.y=1.15; rack.add(cross);
+    for(let i=0;i<3;i++){ const sw=new THREE.Group(); sw.position.set(-.55+i*.55,.18,0); sw.rotation.z=.28;
+      const bl=new THREE.Mesh(new THREE.BoxGeometry(.06,.95,.02),std(0xeaf2fc,.2,.95)); bl.position.y=.62; sw.add(bl);
+      const gd=new THREE.Mesh(new THREE.BoxGeometry(.24,.05,.05),std(0xf7dd7a,.3,.9)); gd.position.y=.12; sw.add(gd);
+      const hd2=new THREE.Mesh(new THREE.CylinderGeometry(.03,.03,.18,5),std(0x5c4020,.9,0)); hd2.position.y=.02; sw.add(hd2); rack.add(sw); }
+    rack.traverse(o=>{o.castShadow=true;}); scene.add(rack);
+    // barrels beside the rack
+    [[-6.9,3.6],[-6.1,4.3]].forEach(p=>{ const bar2=new THREE.Mesh(new THREE.CylinderGeometry(.42,.38,.95,9),woodM); bar2.position.set(p[0],.48,p[1]); bar2.castShadow=true; scene.add(bar2); [.25,.75].forEach(y=>{ const band=new THREE.Mesh(new THREE.TorusGeometry(.42,.03,5,12),std(0x2c2c30,.5,.7)); band.rotation.x=Math.PI/2; band.position.set(p[0],y,p[1]); scene.add(band); }); });
+    // brazier: iron bowl + flame (joins the flame flicker list, no extra light)
+    const brz=new THREE.Group(); brz.position.set(-6.9,0,-3.4);
+    const leg=new THREE.Mesh(new THREE.CylinderGeometry(.05,.09,.7,5),std(0x2c2c30,.5,.7)); leg.position.y=.35; brz.add(leg);
+    const bowl=new THREE.Mesh(new THREE.CylinderGeometry(.5,.22,.3,8,1,true),std(0x3a3a40,.45,.75)); bowl.position.y=.82; brz.add(bowl);
+    const bflame=new THREE.Mesh(new THREE.ConeGeometry(.34,.9,7),new THREE.MeshStandardMaterial({color:0xff8c2e,emissive:0xff6a00,emissiveIntensity:1.7,roughness:1})); bflame.position.y=1.3; brz.add(bflame); flames.push(bflame); scene.add(brz);
+    // scattered stones + pebbles outside the ring
+    const stoneScatter=new THREE.MeshStandardMaterial({color:0x6a655c,roughness:.95});
+    for(let i=0;i<42;i++){ const a=Math.random()*Math.PI*2, rr=8.6+Math.random()*4.5; const st=new THREE.Mesh(new THREE.DodecahedronGeometry(.07+Math.random()*.13),stoneScatter); st.position.set(Math.cos(a)*rr,.05,Math.sin(a)*rr); st.rotation.set(Math.random()*3,Math.random()*3,0); scene.add(st); }
+    // grass tufts outside the ring
+    const grassM=new THREE.MeshStandardMaterial({color:0x5a7038,roughness:.95});
+    for(let i=0;i<64;i++){ const a=Math.random()*Math.PI*2, rr=8.4+Math.random()*5; const tu=new THREE.Group(); for(let b2=0;b2<3;b2++){ const blade=new THREE.Mesh(new THREE.ConeGeometry(.05,.34+Math.random()*.18,4),grassM); blade.position.set((Math.random()-.5)*.16,.17,(Math.random()-.5)*.16); blade.rotation.z=(Math.random()-.5)*.5; tu.add(blade); } tu.position.set(Math.cos(a)*rr,0,Math.sin(a)*rr); scene.add(tu); }
+  }
+  // torch smoke wisps + drifting embers (points, recycled)
+  { const n=28, pos=new Float32Array(n*3); for(let i=0;i<n;i++){ const t4=[[-7.8,-4.5],[7.8,-4.5],[-7.8,4.8],[7.8,4.8]][i%4]; pos[i*3]=t4[0]+(Math.random()-.5)*.3; pos[i*3+1]=2.9+Math.random()*2.6; pos[i*3+2]=t4[1]+(Math.random()-.5)*.3; } const geo=new THREE.BufferGeometry(); geo.setAttribute('position',new THREE.BufferAttribute(pos,3)); smokePts=new THREE.Points(geo,new THREE.PointsMaterial({color:0x9a958c,size:.34,transparent:true,opacity:.16,depthWrite:false})); scene.add(smokePts); }
+  { const n=34, pos=new Float32Array(n*3); for(let i=0;i<n;i++){ pos[i*3]=(Math.random()-.5)*13; pos[i*3+1]=.3+Math.random()*3.4; pos[i*3+2]=(Math.random()-.5)*13; } const geo=new THREE.BufferGeometry(); geo.setAttribute('position',new THREE.BufferAttribute(pos,3)); emberPts=new THREE.Points(geo,new THREE.PointsMaterial({color:0xffa040,size:.09,transparent:true,opacity:.85,blending:THREE.AdditiveBlending,depthWrite:false})); scene.add(emberPts); }
   // dust motes
   { const n=130, pos=new Float32Array(n*3); for(let i=0;i<n;i++){ pos[i*3]=(Math.random()-.5)*17; pos[i*3+1]=.3+Math.random()*4.6; pos[i*3+2]=(Math.random()-.5)*17; } const geo=new THREE.BufferGeometry(); geo.setAttribute('position',new THREE.BufferAttribute(pos,3)); dustPts=new THREE.Points(geo,new THREE.PointsMaterial({color:0xffe2a8,size:.07,transparent:true,opacity:.65})); scene.add(dustPts); }
   // spark burst pool
@@ -671,6 +828,8 @@ function initScene(){
   // nameplates ride on the knights (follow lunge/knockback/bob); sprites always face the camera
   plateA=makeNameplate(); knightA.add(plateA.sprite);
   plateB=makeNameplate(); knightB.add(plateB.sprite);
+  hitA=makeHitLabel(); knightA.add(hitA.sprite);
+  hitB=makeHitLabel(); knightB.add(hitB.sprite);
   // both knights face each other (opposite Y rotations), so local +Z shifts each plate toward pit centre — keeps pills on-screen in the narrow portrait duel framing
   plateA.sprite.position.z=.7; plateB.sprite.position.z=.7;
   refreshNameplates();
@@ -694,7 +853,7 @@ function initScene(){
       const bobY=Math.abs(Math.sin(t*2.4+idx*1.7))*.05*(an.swing?.35:1)+(walking?Math.abs(Math.sin(u.walkPhase))*.07:0);
       u.shR.rotation.set(_pose.shX,0,_pose.shZ); u.elR.rotation.x=_pose.elX; u.wrR.rotation.x=_pose.wrX;
       u.shL.rotation.x=-.4-_pose.shield*.85; u.elL.rotation.x=-.55-_pose.shield*.3;
-      u.shieldG.position.set(-.14-_pose.shield*.04,-.34+_pose.shield*.16,_pose.shield*.32);
+      u.shieldG.position.set(-.16-_pose.shield*.04,-.38+_pose.shield*.16,_pose.shield*.32);
       u.torsoG.rotation.y=_pose.twist; u.torsoG.rotation.x=_pose.lean;
       u.headG.rotation.x=-.45*headSnap; u.headG.rotation.z=tilt*1.5;
       const idleStep=Math.sin(t*2.4+idx*1.7)*.06;
@@ -711,8 +870,13 @@ function initScene(){
     if(pitSpot){ pitSpot.intensity=.55+spotPulse*1.2; if(spotPulse>0){ spotPulse*=Math.pow(.001,dt); if(spotPulse<.01) spotPulse=0; } }
     flames.forEach((f,i)=>{ const s=1+Math.sin(t*11+i*2.1)*.16+Math.sin(t*23+i)*.07; f.scale.set(s,s*(1+Math.sin(t*17+i)*.12),s); });
     torchLights.forEach((li,i)=>{ const ud=li.userData; li.intensity=ud.base+Math.sin(t*ud.sp+ud.ph)*.22+Math.sin(t*(ud.sp*2.6)+ud.ph*1.7)*.1; });
-    crowd.forEach(p=>{ p.position.y=p.position.y; p.children[0].position.y=.22+Math.abs(Math.sin(t*2+p.userData.ph))*.03; });
+    if(crowdExcite>0) crowdExcite=Math.max(0,crowdExcite-dt*1.4);
+    crowd.forEach(p=>{ p.children[0].position.y=.22+Math.abs(Math.sin(t*2+p.userData.ph))*(.03+crowdExcite*.14); });
+    crowdArms.forEach(o=>{ o.arm.rotation.z=o.side*(2.6-(crowdExcite>0?Math.abs(Math.sin(t*7+o.ph))*crowdExcite*1.1:Math.sin(t*1.5+o.ph)*.12)); });
     banners.forEach(b=>{ b.rotation.y=Math.sin(t*1.6+b.userData.ph)*.16; });
+    pennants.forEach(f=>{ f.rotation.y=Math.sin(t*2.6+f.userData.ph)*.45; f.rotation.z=Math.sin(t*3.4+f.userData.ph)*.12; });
+    if(smokePts){ const pos=smokePts.geometry.attributes.position; for(let i=0;i<pos.count;i++){ let y=pos.getY(i)+dt*.5; if(y>5.6) y=2.95; pos.setY(i,y); pos.setX(i,pos.getX(i)+Math.sin(t*.9+i*1.7)*dt*.25); } pos.needsUpdate=true; }
+    if(emberPts){ const pos=emberPts.geometry.attributes.position; for(let i=0;i<pos.count;i++){ let y=pos.getY(i)+dt*(.35+((i*37)%10)/22); if(y>4.4) y=.3; pos.setY(i,y); pos.setX(i,pos.getX(i)+Math.sin(t*1.3+i)*dt*.3); } pos.needsUpdate=true; }
     if(dustPts){ const pos=dustPts.geometry.attributes.position; for(let i=0;i<pos.count;i++){ let y=pos.getY(i)+dt*.14; if(y>5.2) y=.25; pos.setY(i,y); pos.setX(i,pos.getX(i)+Math.sin(t*.7+i)*dt*.12); } pos.needsUpdate=true; }
     if(sparks&&sparks.life>0){ sparks.life-=dt/.55; const pos=sparks.pts.geometry.attributes.position; for(let i=0;i<sparks.vel.length;i++){ const v=sparks.vel[i]; v.y-=dt*5.5; pos.setXYZ(i,pos.getX(i)+v.x*dt,pos.getY(i)+v.y*dt,pos.getZ(i)+v.z*dt); } pos.needsUpdate=true; sparks.pts.material.opacity=Math.max(0,sparks.life); if(sparks.life<=0) sparks.pts.visible=false; }
     if(crown&&crown.visible&&crownDrop>=0){ crownDrop+=dt/.7; const p=Math.min(crownDrop,1); const bounce=p<.7? (1-p/.7)*-1.6 : -Math.abs(Math.sin((p-.7)/.3*Math.PI))*.22*(1-p); crown.position.y=3.05+bounce; crown.rotation.y+=dt*2.4; if(p>=1) crownDrop=-1; }
