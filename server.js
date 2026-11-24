@@ -46,6 +46,31 @@ function resolveExchange(a, b) {
   return { aDmg: WIN_DAMAGE[b], bDmg: 0, word: wordFor(b), winner: 'b' };
 }
 
+// ---------- Reach / knockback / off-balance (duel layer; resolveExchange stays pure) ----------
+// Fighters stand HOME_GAP apart. Taking a hit knocks you back; at the start of the
+// next exchange cycle you walk forward until the gap is back within REACH_GAP.
+// If you took >=2 damage you are offBalance for the NEXT exchange only: if you win
+// that exchange by the triangle, your hit glances for base-1 damage (min 1).
+// The triangle winner NEVER changes; clash/GUARDED are never glanced.
+const HOME_GAP = 3.1;   // stance: knights at x ±1.55
+const REACH_GAP = 3.4;  // can hit while gap <= this
+const knockbackFor = dmg => dmg <= 0 ? 0 : Math.round((0.25 + 0.16 * dmg) * 1000) / 1000;
+// Walk-forward model (mirrored by the client): during a cycle, displaced fighters
+// walk in until the combined displacement leaves the gap exactly at REACH_GAP.
+// The most-displaced fighter walks first.
+function applyWalkForward(disp) {
+  let excess = (disp.a + disp.b) - (REACH_GAP - HOME_GAP);
+  const walked = { a: 0, b: 0 };
+  while (excess > 0.0005 && (disp.a > 0 || disp.b > 0)) {
+    const side = disp.a >= disp.b ? 'a' : 'b';
+    const step = Math.min(disp[side], excess);
+    disp[side] = Math.round((disp[side] - step) * 1000) / 1000;
+    walked[side] = Math.round((walked[side] + step) * 1000) / 1000;
+    excess = Math.round((excess - step) * 1000) / 1000;
+  }
+  return walked;
+}
+
 // ---------- Practice bots (from game.ts OPPONENTS, cpu tier) ----------
 const BOTS = [
   { id: 'pip',  name: 'Squire Pip',       title: 'Training-yard squire',    stake: 5,  style: { attack: 3, strength: 2, defence: 5 }, cunning: 0,    colors: { armor: '#8a7a5c', trim: '#5c4f38', plume: '#c9b458', shield: '#a08b62' }, taunt: 'Pip hides behind his shield a lot. Smash through it.' },
@@ -150,6 +175,8 @@ function startDuel(nameA, nameB, stake) {
   const duel = {
     id, a: nameA, b: nameB, stake, pot: stake * 2, isBotDuel, botId: isBotDuel ? botDef.id : null,
     hp: { a: MAX_HP, b: MAX_HP },
+    offBalance: { a: false, b: false }, // took >=2 dmg last exchange: next win glances
+    disp: { a: 0, b: 0 },               // authoritative knockback displacement per fighter
     locked: { a: null, b: null }, last: { a: 'attack', b: 'attack' },
     historyA: [], tick: 0, settled: false, phase: 'countdown', timer: null,
   };
@@ -160,7 +187,7 @@ function startDuel(nameA, nameB, stake) {
   personalState(nameA); if (ub) personalState(nameB);
   broadcastPlayers();
   const colorsOf = n => { const bot = botByName(n); if (bot) return bot.colors; const u = db.users[n]; return outfitById(u ? u.outfit : 'peasant').colors; };
-  broadcast({ type: 'duelStart', duelId: id, a: nameA, b: nameB, stake, pot: duel.pot, hpA: MAX_HP, hpB: MAX_HP, colorsA: colorsOf(nameA), colorsB: colorsOf(nameB) });
+  broadcast({ type: 'duelStart', duelId: id, a: nameA, b: nameB, stake, pot: duel.pot, hpA: MAX_HP, hpB: MAX_HP, colorsA: colorsOf(nameA), colorsB: colorsOf(nameB), homeGap: HOME_GAP, reachGap: REACH_GAP, dispA: 0, dispB: 0 });
   sysChat(`${nameA} vs ${nameB} — ${stake} gp each in the pit!`);
   let count = 3;
   broadcast({ type: 'duelCountdown', duelId: id, n: count });
@@ -182,9 +209,23 @@ function startDuel(nameA, nameB, stake) {
     duel.last.a = moveA; duel.last.b = moveB;
     duel.historyA.push(moveA);
     duel.locked.a = null; if (!duel.isBotDuel) duel.locked.b = null;
+    // Walk-forward happened during this cycle: displaced fighters close back into reach.
+    const walked = applyWalkForward(duel.disp);
     const r = resolveExchange(moveA, moveB);
+    // Glancing hit: an off-balance fighter who WINS the triangle lands it weakly.
+    // Winner never changes; clash/GUARDED never glance. offBalance is consumed either way.
+    let glance = null;
+    if (r.winner === 'a' && duel.offBalance.a) { glance = 'a'; r.bDmg = Math.max(1, r.bDmg - 1); }
+    else if (r.winner === 'b' && duel.offBalance.b) { glance = 'b'; r.aDmg = Math.max(1, r.aDmg - 1); }
+    const wasOff = { a: duel.offBalance.a, b: duel.offBalance.b };
     duel.hp.a -= r.aDmg; duel.hp.b -= r.bDmg;
-    broadcast({ type: 'duelExchange', duelId: id, a: duel.a, b: duel.b, moveA, moveB, aDmg: r.aDmg, bDmg: r.bDmg, word: r.word, winnerSide: r.winner, hpA: Math.max(0, duel.hp.a), hpB: Math.max(0, duel.hp.b) });
+    // Knockback from THIS exchange's damage; offBalance re-sets from damage taken now.
+    const kbA = knockbackFor(r.aDmg), kbB = knockbackFor(r.bDmg);
+    duel.disp.a = Math.round((duel.disp.a + kbA) * 1000) / 1000;
+    duel.disp.b = Math.round((duel.disp.b + kbB) * 1000) / 1000;
+    duel.offBalance.a = r.aDmg >= 2;
+    duel.offBalance.b = r.bDmg >= 2;
+    broadcast({ type: 'duelExchange', duelId: id, a: duel.a, b: duel.b, moveA, moveB, aDmg: r.aDmg, bDmg: r.bDmg, word: r.word, winnerSide: r.winner, hpA: Math.max(0, duel.hp.a), hpB: Math.max(0, duel.hp.b), kbA, kbB, glance, glanceA: glance === 'a', glanceB: glance === 'b', dispA: duel.disp.a, dispB: duel.disp.b, walkedA: walked.a, walkedB: walked.b, offBalanceA: wasOff.a, offBalanceB: wasOff.b });
     if (duel.hp.a <= 0 || duel.hp.b <= 0) {
       let winner;
       if (duel.hp.a <= 0 && duel.hp.b <= 0) winner = duel.hp.a === duel.hp.b ? duel.a : (duel.hp.a > duel.hp.b ? duel.a : duel.b);
@@ -356,4 +397,4 @@ wss.on('connection', ws => {
 });
 
 server.listen(PORT, () => console.log(`Duelgame Online listening on :${PORT} (db: ${DB_PATH})`));
-module.exports = { _settleById, duels, db, resolveExchange, BOTS, OUTFITS };
+module.exports = { _settleById, duels, db, resolveExchange, knockbackFor, applyWalkForward, HOME_GAP, REACH_GAP, BOTS, OUTFITS };
