@@ -3,6 +3,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <title>Duelgame Online — 3-Tick Duel Arena vs Real Players</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8773554474653193" crossorigin="anonymous"></script>
 <style>
 :root{--gold:#f7dd7a;--gold2:#c9a227;--ink:#f5ead2;--mut:#b8a67e;--card:#241c10;--card2:#2e2413;--line:#57471f;--red:#e53935}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -996,10 +997,10 @@ window.ADSENSE_PUB_ID='ca-pub-8773554474653193';
   var id=String(window.ADSENSE_PUB_ID||'').trim();
   if(!/^ca-pub-\d{10,}$/.test(id)) return;
   document.querySelectorAll('.adsbygoogle').forEach(function(el){ el.setAttribute('data-ad-client',id); });
-  var s=document.createElement('script'); s.async=true; s.crossOrigin='anonymous';
-  s.src='https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client='+encodeURIComponent(id);
-  document.head.appendChild(s);
   document.body.classList.add('ads-on');
-  s.onload=function(){ document.querySelectorAll('.adsbygoogle').forEach(function(){ try{ (window.adsbygoogle=window.adsbygoogle||[]).push({}); }catch(e){} }); };
+  // The AdSense script itself is a static tag in <head> (Google's exact snippet).
+  // Here we only activate the slots once it has loaded (or right away if it already has).
+  var pushAds=function(){ document.querySelectorAll('.adsbygoogle').forEach(function(){ try{ (window.adsbygoogle=window.adsbygoogle||[]).push({}); }catch(e){} }); };
+  if(window.adsbygoogle) pushAds(); else window.addEventListener('load',pushAds);
 })();
 </script></body></html>
