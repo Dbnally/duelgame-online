@@ -225,10 +225,10 @@ async function fbFetchProfile(code) {
   });
   const tokenRes = await fetch(tokenUrl, { signal: AbortSignal.timeout(10000) });
   const tokenJson = await tokenRes.json().catch(() => null);
-  if (!tokenRes.ok || !tokenJson || !tokenJson.access_token) throw new Error('facebook code exchange failed');
+  if (!tokenRes.ok || !tokenJson || !tokenJson.access_token) throw new Error('facebook code exchange failed: ' + ((tokenJson && tokenJson.error && tokenJson.error.message) || ('HTTP ' + tokenRes.status)));
   const meRes = await fetch('https://graph.facebook.com/v21.0/me?fields=id,name&access_token=' + encodeURIComponent(tokenJson.access_token), { signal: AbortSignal.timeout(10000) });
   const me = await meRes.json().catch(() => null);
-  if (!meRes.ok || !me || !me.id) throw new Error('facebook profile fetch failed');
+  if (!meRes.ok || !me || !me.id) throw new Error('facebook profile fetch failed: ' + ((me && me.error && me.error.message) || ('HTTP ' + meRes.status)));
   return { id: String(me.id), name: String(me.name || '') };
 }
 
@@ -271,10 +271,12 @@ async function handleFbCallback(res, url) {
   pruneFbMaps();
   const stateExp = fbStates.get(state);
   if (state) fbStates.delete(state); // single-use, whatever happens next
+  console.log('[fb] callback: stateFound=' + !!stateExp + ' stateExpired=' + !!(stateExp && stateExp <= Date.now()) + ' hasCode=' + !!code + ' statesHeld=' + fbStates.size);
   if (!stateExp || stateExp <= Date.now() || !code) return fbFailPage(res, 400, 'That Facebook login link was invalid or expired. Please go back and tap “Log in with Facebook” again.');
   let profile;
   try { profile = await fbFetchProfile(code); }
-  catch { return fbFailPage(res, 502, 'Facebook login failed while talking to Facebook. Please try again in a moment.'); }
+  catch (e) { console.log('[fb] exchange/profile failed: ' + (e && e.message)); return fbFailPage(res, 502, 'Facebook login failed while talking to Facebook. Please try again in a moment.'); }
+  console.log('[fb] login ok for profile id ' + profile.id);
   const username = getOrCreateFbUser(profile.id, profile.name);
   const token = mintFbToken(username);
   res.writeHead(302, { Location: '/?fbtoken=' + encodeURIComponent(token) });
