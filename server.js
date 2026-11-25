@@ -158,12 +158,14 @@ function checkPw(user, password) {
 // the player always signs in through Facebook. We never auto-link an existing
 // username/password account to a Facebook id (no linking UI in this round).
 const fbStates = new Map();     // oauth state -> expiresAt (single-use, 10 min)
-const fbLoginTokens = new Map(); // one-time login token -> {username, expiresAt} (single-use, 5 min)
+const fbLoginTokens = new Map(); // login token -> {username, expiresAt} (reusable until expiry, 5 min — duplicate callback hits must not strand the player)
+const fbConsumedStates = new Map(); // state -> {token, expiresAt} for states already turned into a login, so a repeated callback hit redirects to that same login instead of an error page
 const randomToken = (bytes = 32) => crypto.randomBytes(bytes).toString('base64url');
 function pruneFbMaps() {
   const now = Date.now();
   for (const [k, exp] of fbStates) if (exp <= now) fbStates.delete(k);
   for (const [k, rec] of fbLoginTokens) if (rec.expiresAt <= now) fbLoginTokens.delete(k);
+  for (const [k, rec] of fbConsumedStates) if (rec.expiresAt <= now) fbConsumedStates.delete(k);
 }
 function findUserByFacebookId(fbId) {
   for (const [name, u] of Object.entries(db.users)) if (u && String(u.facebookId) === String(fbId)) return name;
@@ -200,8 +202,8 @@ function consumeFbToken(token) {
   pruneFbMaps();
   const rec = fbLoginTokens.get(String(token || ''));
   if (!rec) return null;
-  fbLoginTokens.delete(String(token)); // single-use: consumed even if expired
-  return rec.expiresAt > Date.now() ? rec : null;
+  if (rec.expiresAt <= Date.now()) { fbLoginTokens.delete(String(token)); return null; }
+  return rec; // reusable until expiry on purpose (see fbLoginTokens note above)
 }
 // Test helper (same pattern as _settleById): mint a one-time fbLogin token.
 // Accepts a username string, or a Facebook profile {id, name} — the profile
@@ -269,6 +271,16 @@ async function handleFbCallback(res, url) {
   const state = url.searchParams.get('state') || '';
   const code = url.searchParams.get('code') || '';
   pruneFbMaps();
+  // Facebook's return sometimes reaches this callback more than once for one
+  // login (retries / redirect chains — seen live 2026-11-25: one login, three
+  // callback hits, the later ones landing the player on an error page). If
+  // this state already produced a login, send the player to that same login.
+  const consumedState = state ? fbConsumedStates.get(state) : null;
+  if (consumedState && consumedState.expiresAt > Date.now()) {
+    console.log('[fb] callback: duplicate hit for an already-completed login — redirecting to its token');
+    res.writeHead(302, { Location: '/?fbtoken=' + encodeURIComponent(consumedState.token) });
+    return res.end();
+  }
   const stateExp = fbStates.get(state);
   if (state) fbStates.delete(state); // single-use, whatever happens next
   console.log('[fb] callback: stateFound=' + !!stateExp + ' stateExpired=' + !!(stateExp && stateExp <= Date.now()) + ' hasCode=' + !!code + ' statesHeld=' + fbStates.size);
@@ -279,6 +291,7 @@ async function handleFbCallback(res, url) {
   console.log('[fb] login ok for profile id ' + profile.id);
   const username = getOrCreateFbUser(profile.id, profile.name);
   const token = mintFbToken(username);
+  if (state) fbConsumedStates.set(state, { token, expiresAt: Date.now() + 10 * 60 * 1000 });
   res.writeHead(302, { Location: '/?fbtoken=' + encodeURIComponent(token) });
   res.end();
 }
