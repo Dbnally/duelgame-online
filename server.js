@@ -34,14 +34,31 @@ const adsConfigured = () => /^\d{10,}$/.test(ADSENSE_PUB_ID);
 
 // ---------- Outfits (same 7, same prices/colors as game.ts OUTFITS) ----------
 const OUTFITS = [
-  { id: 'peasant', name: 'Peasant Rags', price: 0,    blurb: 'What you walked in wearing.', colors: { armor: '#9a8a72', trim: '#6b5d49', plume: '#b0a58e', shield: '#8a7a5f' } },
-  { id: 'bronze',  name: 'Bronze Trim',  price: 75,   blurb: 'First real metal. Smells like victory.', colors: { armor: '#a8763e', trim: '#6e4a24', plume: '#d99a4e', shield: '#8a5c2e' } },
-  { id: 'steel',   name: 'Steel Plate',  price: 200,  blurb: 'Polished plate that turns heads at the gate.', colors: { armor: '#9fb2c8', trim: '#5f7189', plume: '#dfe9f5', shield: '#7d93ad' } },
-  { id: 'shadow',  name: 'Shadow Cloak', price: 350,  blurb: 'Dark leathers for fighters who strike first.', colors: { armor: '#3d4457', trim: '#232833', plume: '#6b7690', shield: '#2e3442' } },
-  { id: 'mithril', name: 'Mithril Shine',price: 450,  blurb: 'Blue-purple sheen, light as cloth, hard as a vault door.', colors: { armor: '#7d7fd6', trim: '#4a4a9e', plume: '#b9b9f2', shield: '#5f5fb8' } },
-  { id: 'dragon',  name: 'Dragon Red',   price: 900,  blurb: 'Red as a hitsplat. The pit goes quiet when it walks in.', colors: { armor: '#b03030', trim: '#6e1d1d', plume: '#e05a4e', shield: '#8c2626' } },
-  { id: 'gilded',  name: 'Gilded King',  price: 2000, blurb: "Solid gold plate. You don't wear it — it announces you.", colors: { armor: '#e3b93c', trim: '#9e7d1c', plume: '#f7dd7a', shield: '#c9a227' } },
+  { id: 'peasant', name: 'Peasant Rags', price: 0,    net: 0,  blurb: 'What you walked in wearing.', colors: { armor: '#9a8a72', trim: '#6b5d49', plume: '#b0a58e', shield: '#8a7a5f' } },
+  { id: 'bronze',  name: 'Bronze Trim',  price: 75,   net: 0,  blurb: 'First real metal. Smells like victory.', colors: { armor: '#a8763e', trim: '#6e4a24', plume: '#d99a4e', shield: '#8a5c2e' } },
+  { id: 'steel',   name: 'Steel Plate',  price: 200,  net: 5,  blurb: 'Polished plate that turns heads at the gate.', colors: { armor: '#9fb2c8', trim: '#5f7189', plume: '#dfe9f5', shield: '#7d93ad' } },
+  { id: 'shadow',  name: 'Shadow Cloak', price: 350,  net: 10, blurb: 'Dark leathers for fighters who strike first.', colors: { armor: '#3d4457', trim: '#232833', plume: '#6b7690', shield: '#2e3442' } },
+  { id: 'mithril', name: 'Mithril Shine',price: 450,  net: 20, blurb: 'Blue-purple sheen, light as cloth, hard as a vault door.', colors: { armor: '#7d7fd6', trim: '#4a4a9e', plume: '#b9b9f2', shield: '#5f5fb8' } },
+  { id: 'dragon',  name: 'Dragon Red',   price: 900,  net: 35, blurb: 'Red as a hitsplat. The pit goes quiet when it walks in.', colors: { armor: '#b03030', trim: '#6e1d1d', plume: '#e05a4e', shield: '#8c2626' } },
+  { id: 'gilded',  name: 'Gilded King',  price: 2000, net: 50, blurb: "Solid gold plate. You don't wear it — it announces you.", colors: { armor: '#e3b93c', trim: '#9e7d1c', plume: '#f7dd7a', shield: '#c9a227' } },
 ];
+// Net score = wins - losses. The cool armour is EARNED at a net score and HELD
+// only while the net score stays high enough (Derek's rule, 2026-11-25): drop
+// below an outfit's net and you lose that outfit — you must rebuy it once your
+// net score earns it back.
+const netOf = u => (u ? (u.wins || 0) - (u.losses || 0) : 0);
+function enforceNetGear(u) {
+  // Strip owned outfits whose net requirement the player no longer meets.
+  // Returns the list of stripped outfit ids. Peasant (net 0) can never strip.
+  if (!u || !Array.isArray(u.owned)) return [];
+  const net = netOf(u);
+  const stripped = u.owned.filter(id => { const o = outfitById(id); return o && (o.net || 0) > net; });
+  if (stripped.length) {
+    u.owned = u.owned.filter(id => !stripped.includes(id));
+    if (stripped.includes(u.outfit)) u.outfit = 'peasant';
+  }
+  return stripped;
+}
 const outfitById = id => OUTFITS.find(o => o.id === id) || OUTFITS[0];
 
 // ---------- Combat (EXACTLY the duelgame rules) ----------
@@ -357,6 +374,7 @@ function playerList() {
 function broadcastPlayers() { const l = playerList(); broadcast({ type: 'players', players: l }); }
 function personalState(name) {
   const u = db.users[name]; if (!u) return;
+  enforceNetGear(u);
   const c = clients.get(name);
   send(c && c.ws, { type: 'state', gold: u.gold, wins: u.wins, losses: u.losses, owned: u.owned, outfit: u.outfit, trophies: u.trophies || 0, campaign: campaignOf(u) });
 }
@@ -476,6 +494,9 @@ function settleDuel(duel, winnerName, reason) {
     if (!loserBot) { const l = db.users[loserName]; if (l) l.losses += 1; }
     else botState[loserBot.id].losses += 1;
   }
+  // Net-gear rule: a loss can drop a fighter's net score below their armour's
+  // requirement — that armour is lost and must be rebought when re-earned.
+  for (const n of [duel.a, duel.b]) { const u = db.users[n]; if (u) enforceNetGear(u); }
   saveDbNow();
   const ca = clients.get(duel.a); if (ca && ca.duelId === duel.id) ca.duelId = null;
   if (!duel.isBotDuel) { const cb = clients.get(duel.b); if (cb && cb.duelId === duel.id) cb.duelId = null; }
@@ -556,6 +577,7 @@ wss.on('connection', ws => {
     if (m.type === 'buy') {
       const o = outfitById(m.outfitId);
       if (myUser.owned.includes(o.id)) { myUser.outfit = o.id; saveDb(); personalState(me); broadcastPlayers(); return; }
+      if ((o.net || 0) > netOf(myUser)) return send(ws, { type: 'error', message: `${o.name} needs a net score of +${o.net} (wins − losses). Yours is ${netOf(myUser) >= 0 ? '+' : ''}${netOf(myUser)}.` });
       if (myUser.gold < o.price) return send(ws, { type: 'error', message: 'Not enough gold for that outfit.' });
       myUser.gold -= o.price; myUser.owned.push(o.id); myUser.outfit = o.id; saveDb();
       personalState(me); broadcastPlayers();
@@ -564,6 +586,7 @@ wss.on('connection', ws => {
     if (m.type === 'equip') {
       const o = outfitById(m.outfitId);
       if (!myUser.owned.includes(o.id)) return send(ws, { type: 'error', message: "You don't own that outfit." });
+      if ((o.net || 0) > netOf(myUser)) return send(ws, { type: 'error', message: `${o.name} needs a net score of +${o.net} (wins − losses).` });
       myUser.outfit = o.id; saveDb();
       personalState(me); broadcastPlayers();
       return;
@@ -673,4 +696,4 @@ wss.on('connection', ws => {
 });
 
 server.listen(PORT, () => console.log(`Duelgame Online listening on :${PORT} (db: ${DB_PATH})`));
-module.exports = { _settleById, _mintFbTokenForTest, duels, db, resolveExchange, knockbackFor, applyWalkForward, HOME_GAP, REACH_GAP, BOTS, OUTFITS, CAMPAIGN_ROUNDS, campaignInfo, fbConfigured, FB_REDIRECT_URI };
+module.exports = { _settleById, _mintFbTokenForTest, duels, db, resolveExchange, knockbackFor, applyWalkForward, HOME_GAP, REACH_GAP, BOTS, OUTFITS, CAMPAIGN_ROUNDS, campaignInfo, fbConfigured, FB_REDIRECT_URI, netOf, enforceNetGear };
