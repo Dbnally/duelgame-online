@@ -77,7 +77,7 @@ button:active{transform:scale(.96)}
 #panel-chat.active{display:flex;flex-direction:column;overflow:hidden}
 #panel-fight.dueling{overflow:hidden}
 #tabbar{flex:0 0 40px;display:flex;gap:3px;padding:4px 5px calc(4px + env(safe-area-inset-bottom));background:#100c06;border-top:1px solid var(--line)}
-#tabbar button{flex:1;min-width:0;padding:5px 0;font-size:11.5px;font-weight:700;border-radius:8px;color:var(--mut);white-space:nowrap;position:relative}
+#tabbar button{flex:1;min-width:0;padding:2px 0;font-size:19px;font-weight:700;border-radius:8px;color:var(--mut);white-space:nowrap;position:relative;line-height:1.1}
 #onlineBadge{position:absolute;top:1px;right:3px;background:var(--red);color:#fff;font-size:10px;font-weight:800;line-height:15px;min-width:15px;padding:0 4px;border-radius:8px;box-shadow:0 1px 3px #000}
 #tabbar button.on{color:#1c150a;background:linear-gradient(180deg,var(--gold),var(--gold2));border-color:var(--gold)}
 /* duel panel */
@@ -89,6 +89,9 @@ button:active{transform:scale(.96)}
 #moves{display:flex;gap:7px;margin:4px 0 2px}
 #moves button{flex:1;font-size:15.5px;font-weight:800;padding:6px 2px;line-height:1.18;border-width:2px;min-height:54px}
 #moves button small{font-size:10.5px;font-weight:600;opacity:.85}
+#moves button .mi{display:block;font-size:27px;line-height:1.05}
+#moves button .ml{display:block;font-size:11px;font-weight:700;letter-spacing:.4px;margin-top:1px}
+#coinPile{display:inline-block;vertical-align:-5px;margin-right:3px;line-height:0}
 #moves button.locked{outline:3px solid var(--gold);outline-offset:1px;animation:lockPulse .45s infinite alternate}
 @keyframes lockPulse{from{filter:brightness(1)}to{filter:brightness(1.45)}}
 #moves button:disabled{opacity:.45}
@@ -140,13 +143,13 @@ select{background:#0d0a05;color:var(--ink);padding:7px;border-radius:8px;border:
 <div id="gameScreen" class="hidden">
   <div id="topbar">
     <span class="nm" id="meName"></span>
-    <span>🪙 <b class="gold" id="meGold">50</b> gp</span>
+    <span title="Your gold"><span id="coinPile"></span><b class="gold" id="meGold">50</b></span>
     <span id="meRecord">0W – 0L</span>
     <span id="meTrophies" class="hidden">🏆 <b class="gold" id="meTrophyN">0</b></span>
     <span class="sp"></span>
     <button id="btnMute" title="Sound on/off">🔊</button>
-    <button id="btnRefill" class="hidden">🆓 +50 gp</button>
-    <button id="btnForfeit" class="hidden">🏳️ Forfeit</button>
+    <button id="btnRefill" class="hidden" title="Free gold when you're broke">🪙 +50</button>
+    <button id="btnForfeit" class="hidden" title="Forfeit the duel">🏳️</button>
   </div>
 
   <div id="scene">
@@ -166,8 +169,8 @@ select{background:#0d0a05;color:var(--ink);padding:7px;border-radius:8px;border:
       <section id="panel-fight" class="tabPanel active">
         <div id="lobbyContent">
           <h3 class="sec">⚔️ Fight</h3>
-          <p style="margin:4px 0 8px;font-size:13.5px;line-height:1.5">Pick a fight: challenge someone in the <b>🌐 Online</b> tab, or take a practice bot in the <b>🤖 Bots</b> tab.</p>
-          <div class="row"><button onclick="switchTab('online')">🌐 Challenge a player</button><button onclick="switchTab('bots')">🤖 Practice bot</button></div>
+          <p style="margin:4px 0 8px;font-size:13.5px;line-height:1.5">Challenge a 🌐 player, or practice vs a 🤖 bot.</p>
+          <div class="row"><button onclick="switchTab('online')">🌐 Players</button><button onclick="switchTab('bots')">🤖 Bots</button></div>
         </div>
         <div id="duelPanel" class="hidden">
           <p id="duelCampaignLine" class="hidden"></p>
@@ -175,49 +178,49 @@ select{background:#0d0a05;color:var(--ink);padding:7px;border-radius:8px;border:
           <div class="hpwrap duelHp" id="wrapB"><span class="who" id="hpBLabel"></span><div class="hpbar"><div class="hpfill" id="hpB" style="width:100%"></div></div><b class="hpnum" id="hpBText">30</b></div>
           <div id="ticks"><span id="t1">●</span><span id="t2">●</span><span id="t3">●</span></div>
           <div id="moves">
-            <button id="btnAttack">🗡️ Attack<br><small>beats Strength · 4</small></button>
-            <button id="btnStrength">💪 Strength<br><small>beats Defence · 6</small></button>
-            <button id="btnDefence">🛡️ Defence<br><small>beats Attack · 2</small></button>
+            <button id="btnAttack"><span class="mi">🗡️</span><span class="ml">Attack</span></button>
+            <button id="btnStrength"><span class="mi">💪</span><span class="ml">Strength</span></button>
+            <button id="btnDefence"><span class="mi">🛡️</span><span class="ml">Defence</span></button>
           </div>
           <p id="duelStatus"></p>
         </div>
       </section>
       <section id="panel-online" class="tabPanel">
-        <h3 class="sec">🌐 Online players — <span id="onlineCount">0</span> online</h3>
-        <div class="row"><label>Stake:</label><select id="stakeSel"><option>5</option><option selected>10</option><option>25</option><option>50</option><option>100</option><option>250</option></select><span>gp</span></div>
+        <h3 class="sec">🌐 Players — <span id="onlineCount">0</span></h3>
+        <div class="row"><label>🪙</label><select id="stakeSel"><option>5</option><option selected>10</option><option>25</option><option>50</option><option>100</option><option>250</option></select></div>
         <div id="playerList"></div>
       </section>
       <section id="panel-bots" class="tabPanel">
-        <h3 class="sec">🤖 Practice bots (no humans needed)</h3>
+        <h3 class="sec">🤖 Bots</h3>
         <div id="botList"></div>
       </section>
       <section id="panel-campaign" class="tabPanel">
-        <h3 class="sec">🏆 Campaign — Tournament</h3>
-        <p id="campIntro" style="margin:2px 0 5px;font-size:12.5px;line-height:1.45">FREE entry. 4 rounds vs the pit's best — win prizes each round, lose and the run ends (prizes won are kept). Clear Round 4 to take the <b class="gold">🏆 trophy</b>.</p>
+        <h3 class="sec">🏆 Tournament</h3>
+        <p id="campIntro" style="margin:2px 0 5px;font-size:12.5px;line-height:1.45">FREE · 4 rounds · win 🪙 each round · clear Round 4 for the <b class="gold">🏆</b>.</p>
         <div class="row" style="margin:2px 0 5px">
-          <button id="btnCampStart">🏆 Enter Tournament (free)</button>
-          <button id="btnCampFight" class="hidden">⚔️ Fight Round</button>
-          <button id="btnCampAbandon" class="hidden">🏳️ Abandon run</button>
+          <button id="btnCampStart">🏆 Enter — FREE</button>
+          <button id="btnCampFight" class="hidden">⚔️ Fight</button>
+          <button id="btnCampAbandon" class="hidden">🏳️ Quit</button>
         </div>
         <p id="campStatus" style="margin:2px 0 5px;font-size:12.5px"></p>
         <div id="campBracket"></div>
       </section>
       <section id="panel-shop" class="tabPanel">
-        <h3 class="sec">👕 Outfit shop — see what you wear</h3>
+        <h3 class="sec">👕 Shop</h3>
         <div class="shop" id="shop"></div>
       </section>
       <section id="panel-chat" class="tabPanel">
         <div id="chat"></div>
-        <div id="chatRow"><input id="chatIn" placeholder="Say something…"><button id="btnChat">Send</button></div>
+        <div id="chatRow"><input id="chatIn" placeholder="Say something…"><button id="btnChat" title="Send">➤</button></div>
       </section>
     </div>
     <nav id="tabbar">
-      <button data-tab="fight" class="on">⚔️ Fight</button>
-      <button data-tab="online" id="tabOnlineBtn">🌐 Online<span id="onlineBadge" class="hidden">1</span></button>
-      <button data-tab="bots">🤖 Bots</button>
-      <button data-tab="campaign">🏆 Camp</button>
-      <button data-tab="shop">👕 Shop</button>
-      <button data-tab="chat">💬 Chat</button>
+      <button data-tab="fight" class="on" title="Fight">⚔️</button>
+      <button data-tab="online" id="tabOnlineBtn" title="Online players">🌐<span id="onlineBadge" class="hidden">1</span></button>
+      <button data-tab="bots" title="Bots">🤖</button>
+      <button data-tab="campaign" title="Tournament">🏆</button>
+      <button data-tab="shop" title="Shop">👕</button>
+      <button data-tab="chat" title="Chat">💬</button>
     </nav>
   </div>
 </div>
@@ -368,7 +371,18 @@ function handle(m){
 }
 function endDuelUI(){ const wasCampaign=lastDuelCampaign; duel=null; lastDuelCampaign=false; $('duelPanel').classList.add('hidden'); $('duelCampaignLine').classList.add('hidden'); $('lobbyContent').classList.remove('hidden'); $('panel-fight').classList.remove('dueling'); $('hpOverlay').classList.add('hidden'); $('btnForfeit').classList.add('hidden'); $('countdown').textContent=''; hideCrown(); setCamMode('lobby'); plateNameA=me; plateNameB=null; refreshNameplates(); clearHitLabels(); if(wasCampaign) switchTab('campaign'); }
 function renderTrophies(){ $('meTrophyN').textContent=myTrophies; $('meTrophies').classList.toggle('hidden',!(myTrophies>0)); }
-function applyState(m){ $('meGold').textContent=m.gold; $('meRecord').textContent=m.wins+'W – '+m.losses+'L'; $('btnRefill').classList.toggle('hidden',!(m.gold<5)); window._owned=m.owned; window._outfit=m.outfit; if(m.campaign) myCampaign=m.campaign; if(typeof m.trophies==='number') myTrophies=m.trophies; renderTrophies(); renderCampaign(); renderShop(); }
+function coinPileSVG(g){ // a gold pile you can SEE grow with the amount
+  const coin=(x,y,s)=>'<ellipse cx="'+x+'" cy="'+y+'" rx="'+(6*s)+'" ry="'+(2.6*s)+'" fill="#f7dd7a" stroke="#c9a227" stroke-width="1"/>';
+  let inner='';
+  if(g<5) inner=coin(8,15,1);
+  else if(g<25) inner=coin(8,15,1)+coin(8,12,1)+coin(8,9,1);
+  else if(g<100) inner=coin(7,15,1)+coin(7,12,1)+coin(19,15,1)+coin(19,12,1)+coin(13,9,1);
+  else if(g<250) inner=coin(6,15,1)+coin(6,12,1)+coin(6,9,1)+coin(18,15,1)+coin(18,12,1)+coin(18,9,1)+coin(12,6,1);
+  else if(g<1000) inner=coin(5,15,1)+coin(5,12,1)+coin(5,9,1)+coin(5,6,1)+coin(16,15,1)+coin(16,12,1)+coin(16,9,1)+coin(16,6,1)+coin(27,15,1)+coin(27,12,1)+coin(11,3,1)+coin(22,3,1);
+  else inner=coin(5,15,1)+coin(5,12,1)+coin(5,9,1)+coin(5,6,1)+coin(5,3,1)+coin(16,15,1)+coin(16,12,1)+coin(16,9,1)+coin(16,6,1)+coin(16,3,1)+coin(27,15,1)+coin(27,12,1)+coin(27,9,1)+coin(27,6,1)+coin(27,3,1)+coin(11,0,1)+coin(22,0,1);
+  return '<svg width="34" height="19" viewBox="-2 -2 36 21">'+inner+'</svg>';
+}
+function applyState(m){ $('meGold').textContent=m.gold; $('coinPile').innerHTML=coinPileSVG(m.gold); $('meRecord').textContent=m.wins+'W – '+m.losses+'L'; $('btnRefill').classList.toggle('hidden',!(m.gold<5)); window._owned=m.owned; window._outfit=m.outfit; if(m.campaign) myCampaign=m.campaign; if(typeof m.trophies==='number') myTrophies=m.trophies; renderTrophies(); renderCampaign(); renderShop(); }
 function renderCampaign(){
   const el=$('campBracket'); if(!el) return;
   const c=myCampaign||{active:false,round:0,wonRounds:[]};
@@ -380,7 +394,7 @@ function renderCampaign(){
   $('btnCampStart').classList.toggle('hidden',!!c.active);
   $('btnCampFight').classList.toggle('hidden',!c.active);
   $('btnCampAbandon').classList.toggle('hidden',!c.active);
-  if(c.active){ const r=myCampaignRounds[c.round-1]; $('btnCampFight').textContent='⚔️ Fight Round '+c.round+(r?': '+r.name:''); $('campStatus').innerHTML='Run in progress — <b>Round '+c.round+' of 4</b>'+(won.length?(' · won so far: '+won.map(n=>myCampaignRounds[n-1].prize+' gp').join(' + ')):'')+(myTrophies?(' · 🏆×'+myTrophies):''); }
+  if(c.active){ const r=myCampaignRounds[c.round-1]; $('btnCampFight').textContent='⚔️ R'+c.round+(r?' · '+r.name:''); $('campStatus').innerHTML='Run in progress — <b>Round '+c.round+' of 4</b>'+(won.length?(' · won so far: '+won.map(n=>myCampaignRounds[n-1].prize+' gp').join(' + ')):'')+(myTrophies?(' · 🏆×'+myTrophies):''); }
   else $('campStatus').innerHTML=myTrophies?('🏆 Trophies won: <b class="gold">'+myTrophies+'</b> — enter again to defend the belt!'):'No run in progress.';
 }
 $('btnCampStart').onclick=()=>{ ensureAudio(); send({type:'campaignStart'}); };
@@ -405,11 +419,11 @@ function renderPlayers(players){
   const badge=$('onlineBadge'); if(badge){ badge.textContent=humans.length; badge.classList.toggle('hidden',humans.length<1); }
   const rows=humans.map(p=>{
     const mine=p.username===me;
-    return '<div class="player"><span><span class="swatch" style="background:'+(p.colors?p.colors.armor:'#888')+'"></span><b>'+esc(p.username)+'</b>'+(mine?' (you)':'')+' · 🪙 '+(p.gold??'—')+' gp · '+p.wins+'W-'+p.losses+'L'+(p.inDuel?' · ⚔️ in duel':' · free')+'</span>'+(mine||p.inDuel?'':'<button onclick="challenge(\''+esc(p.username)+'\')">⚔️ Challenge</button>')+'</div>';
+    return '<div class="player"><span><span class="swatch" style="background:'+(p.colors?p.colors.armor:'#888')+'"></span><b>'+esc(p.username)+'</b>'+(mine?' (you)':'')+' · 🪙 '+(p.gold??'—')+' · '+p.wins+'W-'+p.losses+'L'+(p.inDuel?' · ⚔️':'')+'</span>'+(mine||p.inDuel?'':'<button title="Challenge" onclick="challenge(\''+esc(p.username)+'\')">⚔️</button>')+'</div>';
   }).join('');
   const alone=humans.length<=1 && (!humans.length || humans[0].username===me);
   $('playerList').innerHTML=rows+(alone?'<p style="margin:6px 0">Just you right now — share the link, or warm up on a bot.</p>':'');
-  $('botList').innerHTML=bots.map(p=>'<div class="player"><span><span class="swatch" style="background:'+p.colors.armor+'"></span><b>'+esc(p.username)+'</b> 🤖 · '+esc(p.title||'')+' · stake '+p.stake+' gp'+(p.inDuel?' · ⚔️ in duel':'')+'<br><small>'+esc(p.taunt||'')+'</small></span>'+(p.inDuel?'':'<button onclick="challengeBot(\''+esc(p.username)+'\','+p.stake+')">⚔️ Fight '+p.stake+' gp</button>')+'</div>').join('');
+  $('botList').innerHTML=bots.map(p=>'<div class="player"><span><span class="swatch" style="background:'+p.colors.armor+'"></span><b>'+esc(p.username)+'</b> 🤖 · '+esc(p.title||'')+' · 🪙 '+p.stake+(p.inDuel?' · ⚔️':'')+'<br><small>'+esc(p.taunt||'')+'</small></span>'+(p.inDuel?'':'<button onclick="challengeBot(\''+esc(p.username)+'\','+p.stake+')">⚔️ 🪙'+p.stake+'</button>')+'</div>').join('');
 }
 window.challenge=name=>send({type:'challenge',target:name,stake:Number($('stakeSel').value)});
 window.challengeBot=(name,stake)=>send({type:'challenge',target:name,stake});
@@ -436,7 +450,7 @@ function renderShop(){
   if(!myOutfits.length) return;
   $('shop').innerHTML=myOutfits.map(o=>{
     const owned=(window._owned||[]).includes(o.id), eq=window._outfit===o.id;
-    return '<div class="item'+(eq?' eq':'')+'"><div class="prev">'+knightSVG(o)+'</div><b>'+esc(o.name)+'</b><br>'+(eq?'✅ Equipped':owned?'<button onclick="equip(\''+o.id+'\')">Wear it</button>':'<button onclick="buy(\''+o.id+'\')">🪙 '+o.price+' gp — Buy</button>')+'</div>';
+    return '<div class="item'+(eq?' eq':'')+'"><div class="prev">'+knightSVG(o)+'</div><b>'+esc(o.name)+'</b><br>'+(eq?'✅ Equipped':owned?'<button onclick="equip(\''+o.id+'\')">Wear</button>':'<button onclick="buy(\''+o.id+'\')">🪙 '+o.price+'</button>')+'</div>';
   }).join('');
 }
 window._shopPreviewCount=()=>document.querySelectorAll('#shop .item svg').length;
