@@ -153,6 +153,7 @@ select{background:#0d0a05;color:var(--ink);padding:7px;border-radius:8px;border:
     <span class="nm" id="meName"></span>
     <span title="Your gold"><span id="coinPile"></span><b class="gold" id="meGold">50</b></span>
     <span id="meRecord">0W – 0L</span>
+    <span id="meNet" title="Net score: wins minus losses. Cool armour needs a high net — drop below and you lose it.">Net +0</span>
     <span id="meTrophies" class="hidden">🏆 <b class="gold" id="meTrophyN">0</b></span>
     <span class="sp"></span>
     <button id="btnMute" title="Sound on/off">🔊</button>
@@ -216,6 +217,7 @@ select{background:#0d0a05;color:var(--ink);padding:7px;border-radius:8px;border:
       </section>
       <section id="panel-shop" class="tabPanel">
         <h3 class="sec">👕 Shop</h3>
+        <p style="margin:2px 0 6px;font-size:12.5px;line-height:1.45">Cool armour needs a <b>net score</b> (wins − losses). Drop below its number and you <b>lose the armour</b> — win it back and rebuy. Your net: <b class="gold" id="shopNetV">+0</b></p>
         <div class="shop" id="shop"></div>
       </section>
       <section id="panel-chat" class="tabPanel">
@@ -265,6 +267,13 @@ function sndClang(big){ noiseBurst(.16,2400,.5); tone(1180,300,.22,'triangle',.3
 function sndBlock(){ noiseBurst(.12,900,.4); tone(300,180,.14,'square',.22); }
 function sndClash(){ noiseBurst(.14,3000,.42); tone(1500,500,.14,'triangle',.24); }
 function sndWin(){ tone(523,523,.14,'square',.16); tone(659,659,.14,'square',.16,.13); tone(784,1046,.3,'square',.18,.26); }
+function sndDeath(){ // "done... DONE" — two heavy tolls when you die, the second lower and final
+  tone(165,52,.55,'sine',.6); noiseBurst(.3,300,.32);
+  tone(123,40,.85,'sine',.65,.48); noiseBurst(.4,220,.28,.48);
+}
+function sndCoinsUp(when){ when=when||0; tone(1568,1568,.09,'square',.11,when); tone(2093,2093,.13,'square',.11,when+.08); tone(2637,2637,.2,'square',.09,when+.16); }
+function sndCoinsDown(){ tone(2093,1568,.12,'square',.07); tone(1568,1046,.18,'square',.07,.09); }
+function sndVictory(){ sndWin(); sndCoinsUp(.45); }
 
 // ---- WebSocket: QUEUE auth until socket is open (the Duel Me bug, fixed here) ----
 function connect(cb){
@@ -373,7 +382,10 @@ function handle(m){
     wb.classList.add('show'); wb.style.display='block';
     // a KO'd loser falls to their knees and dies (a forfeit just ends the duel)
     if(m.reason==='ko'){ const loserK = m.winner===duel?.a ? knightB : knightA; setTimeout(()=>{ if(duel) startDeath(loserK); },450); }
-    showCrown(m.winner===duel?.a); sndWin(); addShake(.25); setCamMode(m.reason==='ko' ? 'duel' : 'winner', m.winner===duel?.a); // on a KO keep both knights in frame so the loser's fall to their knees is seen
+    showCrown(m.winner===duel?.a);
+    if(duel && duel.mine){ if(iWon) sndVictory(); else if(m.reason==='ko') sndDeath(); }
+    else sndWin();
+    addShake(.25); setCamMode(m.reason==='ko' ? 'duel' : 'winner', m.winner===duel?.a); // on a KO keep both knights in frame so the loser's fall to their knees is seen
     if(m.campaign) toast(iWon?('🏆 Round '+(m.round||'')+' cleared! +'+(m.prize||0)+' gp'+(m.trophy?' + TROPHY!':'')):('Campaign run over — '+(m.winner||'')+' took Round '+(m.round||'')+'.'),4200);
     else toast(iWon?'🏆 You won '+m.pot+' gp!':(m.winner+' took the '+m.pot+' gp pot.'),4000);
     setTimeout(endDuelUI,3500);
@@ -393,7 +405,34 @@ function coinPileSVG(g){ // a gold pile you can SEE grow with the amount
   else inner=coin(5,15,1)+coin(5,12,1)+coin(5,9,1)+coin(5,6,1)+coin(5,3,1)+coin(16,15,1)+coin(16,12,1)+coin(16,9,1)+coin(16,6,1)+coin(16,3,1)+coin(27,15,1)+coin(27,12,1)+coin(27,9,1)+coin(27,6,1)+coin(27,3,1)+coin(11,0,1)+coin(22,0,1);
   return '<svg width="34" height="19" viewBox="-2 -2 36 21">'+inner+'</svg>';
 }
-function applyState(m){ $('meGold').textContent=m.gold; $('coinPile').innerHTML=coinPileSVG(m.gold); $('meRecord').textContent=m.wins+'W – '+m.losses+'L'; $('btnRefill').classList.toggle('hidden',!(m.gold<5)); window._owned=m.owned; window._outfit=m.outfit; if(m.campaign) myCampaign=m.campaign; if(typeof m.trophies==='number') myTrophies=m.trophies; renderTrophies(); renderCampaign(); renderShop(); }
+let displayedGold=null, goldAnimTimer=null;
+function paintGold(v){ $('meGold').textContent=v; $('coinPile').innerHTML=coinPileSVG(v); }
+function animateGold(to){ // watch your coins add up — or get taken away
+  if(displayedGold===null){ displayedGold=to; paintGold(to); return; }
+  if(to===displayedGold){ paintGold(to); return; }
+  const up=to>displayedGold, from=displayedGold;
+  displayedGold=to;
+  if(me) (up?sndCoinsUp():sndCoinsDown());
+  $('meGold').style.color=up?'#69f0ae':'#ef9a9a';
+  clearInterval(goldAnimTimer);
+  const diff=to-from, steps=Math.min(24,Math.max(6,Math.abs(diff)));
+  let i=0;
+  goldAnimTimer=setInterval(()=>{ i++; paintGold(Math.round(from+diff*i/steps)); if(i>=steps){ clearInterval(goldAnimTimer); paintGold(to); $('meGold').style.color=''; } },45);
+}
+function applyState(m){
+  const prevOutfit=window._outfit, prevOwned=window._owned;
+  animateGold(m.gold);
+  $('meRecord').textContent=m.wins+'W – '+m.losses+'L';
+  const net=m.wins-m.losses; window._net=net;
+  $('meNet').textContent='Net '+(net>=0?'+':'')+net;
+  const snv=$('shopNetV'); if(snv) snv.textContent=(net>=0?'+':'')+net;
+  $('btnRefill').classList.toggle('hidden',!(m.gold<5)); window._owned=m.owned; window._outfit=m.outfit;
+  if(prevOwned && prevOutfit && prevOutfit!=='peasant' && !(m.owned||[]).includes(prevOutfit)){
+    const lost=(myOutfits||[]).find(o=>o.id===prevOutfit);
+    toast('💔 Your '+(lost?lost.name:'armour')+' is gone — your net score dropped below its number. Win it back and rebuy it!',4200);
+  }
+  if(m.campaign) myCampaign=m.campaign; if(typeof m.trophies==='number') myTrophies=m.trophies; renderTrophies(); renderCampaign(); renderShop();
+}
 function renderCampaign(){
   const el=$('campBracket'); if(!el) return;
   const c=myCampaign||{active:false,round:0,wonRounds:[]};
@@ -461,7 +500,8 @@ function renderShop(){
   if(!myOutfits.length) return;
   $('shop').innerHTML=myOutfits.map(o=>{
     const owned=(window._owned||[]).includes(o.id), eq=window._outfit===o.id;
-    return '<div class="item'+(eq?' eq':'')+'"><div class="prev">'+knightSVG(o)+'</div><b>'+esc(o.name)+'</b><br>'+(eq?'✅ Equipped':owned?'<button onclick="equip(\''+o.id+'\')">Wear</button>':'<button onclick="buy(\''+o.id+'\')">🪙 '+o.price+'</button>')+'</div>';
+    const net=window._net||0, need=o.net||0, netLine=need?('<br><small>'+(owned||net>=need?('🏆 Net +'+need+' ✓'):('🔒 Needs net +'+need))+'</small>'):'';
+    return '<div class="item'+(eq?' eq':'')+'"><div class="prev">'+knightSVG(o)+'</div><b>'+esc(o.name)+'</b>'+netLine+'<br>'+(eq?'✅ Equipped':owned?'<button onclick="equip(\''+o.id+'\')">Wear</button>':'<button onclick="buy(\''+o.id+'\')">🪙 '+o.price+'</button>')+'</div>';
   }).join('');
 }
 window._shopPreviewCount=()=>document.querySelectorAll('#shop .item svg').length;
