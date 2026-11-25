@@ -26,6 +26,12 @@ button:active{transform:scale(.96)}
 #btnFacebook .fbF{display:inline-block;background:#fff;color:#1877F2;font-weight:900;border-radius:4px;width:20px;height:20px;line-height:20px;text-align:center;margin-right:8px;font-size:16px;vertical-align:-3px}
 .loginOr{text-align:center;color:var(--mut);font-size:12px;margin:2px 0}
 #authErr{color:#ef9a9a;margin:0;min-height:18px;text-align:center;font-size:13px}
+/* AdSense slots: hidden until a publisher ID is set (window.ADSENSE_PUB_ID). Never shown during a duel — login + lobby only, fight area untouched. */
+.adslot{display:none;text-align:center;overflow:hidden}
+body.ads-on .adslot{display:block}
+#adLogin{margin-top:2px}
+#adLobby{margin:8px 0 2px}
+.adslot .adlabel{font-size:10px;letter-spacing:1.5px;color:var(--mut);text-transform:uppercase;margin-bottom:2px}
 
 /* ---------- GAME: 100dvh flex column, page never scrolls ---------- */
 #gameScreen{height:100dvh;display:flex;flex-direction:column;overflow:hidden;background:#0e0b06}
@@ -137,6 +143,7 @@ select{background:#0d0a05;color:var(--ink);padding:7px;border-radius:8px;border:
   <p class="loginOr">— or —</p>
   <button id="btnFacebook" type="button"><span class="fbF">f</span>Log in with Facebook</button>
   <p id="authErr"></p>
+  <div class="adslot" id="adLogin"><div class="adlabel">Advertisement</div><ins class="adsbygoogle" style="display:block" data-ad-format="auto" data-full-width-responsive="true"></ins></div>
 </div>
 
 <!-- GAME -->
@@ -171,6 +178,7 @@ select{background:#0d0a05;color:var(--ink);padding:7px;border-radius:8px;border:
           <h3 class="sec">⚔️ Fight</h3>
           <p style="margin:4px 0 8px;font-size:13.5px;line-height:1.5">Challenge a 🌐 player, or practice vs a 🤖 bot.</p>
           <div class="row"><button onclick="switchTab('online')">🌐 Players</button><button onclick="switchTab('bots')">🤖 Bots</button></div>
+          <div class="adslot" id="adLobby"><div class="adlabel">Advertisement</div><ins class="adsbygoogle" style="display:block" data-ad-format="auto" data-full-width-responsive="true"></ins></div>
         </div>
         <div id="duelPanel" class="hidden">
           <p id="duelCampaignLine" class="hidden"></p>
@@ -977,4 +985,21 @@ function animateExchange(m){
 }
 function showCrown(overA){ if(!crown) return; const k=overA?knightA:knightB; if(!k) return; crown.position.set(k.position.x,4.6,0); crown.visible=true; crownDrop=0; liftPlates(true); }
 function hideCrown(){ if(crown) crown.visible=false; crownDrop=-1; liftPlates(false); }
+</script>
+<script>
+/* ---------- Google AdSense (dormant until Derek's publisher ID is set) ----------
+   To turn ads ON: set ADSENSE_PUB_ID below to Derek's ID (looks like "ca-pub-1234567890123456")
+   AND set the same value (without "ca-") as env ADSENSE_PUB_ID on the server for /ads.txt.
+   While it is empty, no ad script loads and no slot is shown — the game is unchanged. */
+window.ADSENSE_PUB_ID='ca-pub-8773554474653193';
+(function(){
+  var id=String(window.ADSENSE_PUB_ID||'').trim();
+  if(!/^ca-pub-\d{10,}$/.test(id)) return;
+  document.querySelectorAll('.adsbygoogle').forEach(function(el){ el.setAttribute('data-ad-client',id); });
+  var s=document.createElement('script'); s.async=true; s.crossOrigin='anonymous';
+  s.src='https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client='+encodeURIComponent(id);
+  document.head.appendChild(s);
+  document.body.classList.add('ads-on');
+  s.onload=function(){ document.querySelectorAll('.adsbygoogle').forEach(function(){ try{ (window.adsbygoogle=window.adsbygoogle||[]).push({}); }catch(e){} }); };
+})();
 </script></body></html>
