@@ -24,6 +24,14 @@ const PUBLIC_URL = (process.env.PUBLIC_URL || 'https://duelgame-online.onrender.
 const FB_REDIRECT_URI = PUBLIC_URL + '/auth/facebook/callback';
 const fbConfigured = () => !!(FB_APP_ID && FB_APP_SECRET);
 
+// ---------- Google AdSense ----------
+// Derek's publisher ID (digits only, e.g. "1234567890123456" from "ca-pub-1234567890123456").
+// Set as env ADSENSE_PUB_ID on Render. Used only for /ads.txt, which AdSense
+// requires to verify the site is allowed to sell its ad space. The client
+// carries the matching ca-pub- ID in public/index.html (window.ADSENSE_PUB_ID).
+const ADSENSE_PUB_ID = String(process.env.ADSENSE_PUB_ID || '8773554474653193').replace(/^ca-/, '');
+const adsConfigured = () => /^\d{10,}$/.test(ADSENSE_PUB_ID);
+
 // ---------- Outfits (same 7, same prices/colors as game.ts OUTFITS) ----------
 const OUTFITS = [
   { id: 'peasant', name: 'Peasant Rags', price: 0,    blurb: 'What you walked in wearing.', colors: { armor: '#9a8a72', trim: '#6b5d49', plume: '#b0a58e', shield: '#8a7a5f' } },
@@ -257,8 +265,9 @@ function privacyPage(res) {
 <p><b>Gameplay:</b> chat messages and duels are broadcast to other players in the lobby while you play; they are not kept as a permanent record by the game.</p></section>
 <section><h2>How it is used</h2>
 <p>Only to run the game: signing you in, saving your gold, record, outfits and campaign progress, and showing your username to other players in the lobby and in duels.</p></section>
-<section><h2>Sharing, selling, and tracking</h2>
-<p>We do not sell your information. We do not share it with advertisers, and the game runs no advertising or third-party tracking. Facebook only receives what is part of the login flow itself, handled under Facebook's own policies.</p></section>
+<section><h2>Sharing, selling, and advertising</h2>
+<p>We do not sell your information. Facebook only receives what is part of the login flow itself, handled under Facebook's own policies.</p>
+<p><b>Advertising:</b> this game is supported by ads served by Google AdSense. Google and its partners may use cookies to serve ads based on your visits to this and other sites. We do not share your game account information (username, gold, record) with Google for advertising. You can opt out of personalised advertising at <a href="https://adssettings.google.com">Google Ads Settings</a>, and learn more in <a href="https://policies.google.com/technologies/ads">Google's advertising policy</a>.</p></section>
 <section><h2>Deleting your data</h2>
 <p>You can ask for your account and its game data to be deleted at any time. Contact the Duelgame Online game operator through the Facebook account or page that runs the game, tell us your in-game username (and say if you signed in with Facebook), and we will delete the account and its stored data.</p></section>
 <section><h2>Changes</h2>
@@ -299,6 +308,11 @@ const server = http.createServer((req, res) => {
   const url = new URL(req.url, 'http://localhost');
   let p = url.pathname;
   if (p === '/privacy') return privacyPage(res);
+  if (p === '/ads.txt') {
+    if (!adsConfigured()) { res.writeHead(404, { 'Content-Type': 'text/plain' }); return res.end('ads.txt not configured yet'); }
+    res.writeHead(200, { 'Content-Type': 'text/plain' });
+    return res.end('google.com, pub-' + ADSENSE_PUB_ID + ', DIRECT, f08c47fec0942fa0\n');
+  }
   if (p === '/auth/facebook') {
     if (!fbConfigured()) return fbNotSetUp(res);
     pruneFbMaps();
