@@ -362,14 +362,16 @@ function handle(m){
     if(m.campaign){ wb.innerHTML='👑 WINNER<br>'+esc(m.winner)+(m.prize?' +'+m.prize+' GP PRIZE':'')+(m.trophy?'<br>🏆 TROPHY!':''); }
     else wb.innerHTML='👑 WINNER<br>'+esc(m.winner)+' +'+m.pot+' GP';
     wb.classList.add('show'); wb.style.display='block';
-    showCrown(m.winner===duel?.a); sndWin(); addShake(.25); setCamMode('winner', m.winner===duel?.a);
+    // a KO'd loser falls to their knees and dies (a forfeit just ends the duel)
+    if(m.reason==='ko'){ const loserK = m.winner===duel?.a ? knightB : knightA; setTimeout(()=>{ if(duel) startDeath(loserK); },450); }
+    showCrown(m.winner===duel?.a); sndWin(); addShake(.25); setCamMode(m.reason==='ko' ? 'duel' : 'winner', m.winner===duel?.a); // on a KO keep both knights in frame so the loser's fall to their knees is seen
     if(m.campaign) toast(iWon?('🏆 Round '+(m.round||'')+' cleared! +'+(m.prize||0)+' gp'+(m.trophy?' + TROPHY!':'')):('Campaign run over — '+(m.winner||'')+' took Round '+(m.round||'')+'.'),4200);
     else toast(iWon?'🏆 You won '+m.pot+' gp!':(m.winner+' took the '+m.pot+' gp pot.'),4000);
     setTimeout(endDuelUI,3500);
     return;
   }
 }
-function endDuelUI(){ const wasCampaign=lastDuelCampaign; duel=null; lastDuelCampaign=false; $('duelPanel').classList.add('hidden'); $('duelCampaignLine').classList.add('hidden'); $('lobbyContent').classList.remove('hidden'); $('panel-fight').classList.remove('dueling'); $('hpOverlay').classList.add('hidden'); $('btnForfeit').classList.add('hidden'); $('countdown').textContent=''; hideCrown(); setCamMode('lobby'); plateNameA=me; plateNameB=null; refreshNameplates(); clearHitLabels(); if(wasCampaign) switchTab('campaign'); }
+function endDuelUI(){ const wasCampaign=lastDuelCampaign; duel=null; lastDuelCampaign=false; resetKnightPose(); $('duelPanel').classList.add('hidden'); $('duelCampaignLine').classList.add('hidden'); $('lobbyContent').classList.remove('hidden'); $('panel-fight').classList.remove('dueling'); $('hpOverlay').classList.add('hidden'); $('btnForfeit').classList.add('hidden'); $('countdown').textContent=''; hideCrown(); setCamMode('lobby'); plateNameA=me; plateNameB=null; refreshNameplates(); clearHitLabels(); if(wasCampaign) switchTab('campaign'); }
 function renderTrophies(){ $('meTrophyN').textContent=myTrophies; $('meTrophies').classList.toggle('hidden',!(myTrophies>0)); }
 function coinPileSVG(g){ // a gold pile you can SEE grow with the amount
   const coin=(x,y,s)=>'<ellipse cx="'+x+'" cy="'+y+'" rx="'+(6*s)+'" ry="'+(2.6*s)+'" fill="#f7dd7a" stroke="#c9a227" stroke-width="1"/>';
@@ -690,7 +692,7 @@ function makeKnight(colors){
   add(new THREE.Mesh(new THREE.BoxGeometry(.03,1.18,.12),M.gold),-.07,0,0,shieldG);
   add(new THREE.Mesh(new THREE.BoxGeometry(.03,.12,.9),M.gold),-.07,0,0,shieldG);
   add(new THREE.Mesh(new THREE.SphereGeometry(.12,8,6),M.gold),-.09,0,0,shieldG); // shield boss / outfit emblem
-  g.userData={torsoG,headG,shR,elR,wrR,shL,elL,shieldG,legL,legR,cape,tip,bladeBase,mats:{armor:M.armor,trim:M.trim,plume:M.plume,shield:M.shield},baseX:0,facing:1,blob:null,trail:null,dispPos:0,dispAnim:null,walkPhase:0,anim:{swing:null,knock:-1,knockDir:1}};
+  g.userData={torsoG,headG,shR,elR,wrR,shL,elL,shieldG,legL,legR,cape,tip,bladeBase,mats:{armor:M.armor,trim:M.trim,plume:M.plume,shield:M.shield},baseX:0,facing:1,blob:null,trail:null,dispPos:0,dispAnim:null,walkPhase:0,anim:{swing:null,knock:-1,knockDir:1,death:-1,deathT:0}};
   // ready guard stance
   shR.rotation.set(GUARD.shX,0,GUARD.shZ); elR.rotation.x=GUARD.elX; wrR.rotation.x=GUARD.wrX;
   shL.rotation.x=-.4; elL.rotation.x=-.55;
@@ -723,7 +725,8 @@ function scheduleWalkForward(){
   setDisp(knightA,t.a,'walk'); setDisp(knightB,t.b,'walk');
 }
 window._reach=()=>{ if(!knightA||!knightB) return null; const a=knightA.userData,b=knightB.userData; return {home:HOME_X,xA:knightA.position.x,xB:knightB.position.x,gap:knightB.position.x-knightA.position.x,dispA:a.dispPos,dispB:b.dispPos,walkingA:!!(a.dispAnim&&a.dispAnim.kind==='walk'),walkingB:!!(b.dispAnim&&b.dispAnim.kind==='walk'),animA:a.dispAnim?a.dispAnim.kind:null,animB:b.dispAnim?b.dispAnim.kind:null}; };
-function resetKnightPose(){ [knightA,knightB].forEach(k=>{ if(!k) return; k.userData.anim={swing:null,knock:-1,knockDir:1}; k.userData.dispPos=0; k.userData.dispAnim=null; applyGuardPose(k); clearTrail(k.userData); k.position.x=k.userData.baseX; k.position.z=0; k.rotation.z=0; }); }
+function resetKnightPose(){ [knightA,knightB].forEach(k=>{ if(!k) return; k.userData.anim={swing:null,knock:-1,knockDir:1,death:-1,deathT:0}; k.userData.dispPos=0; k.userData.dispAnim=null; applyGuardPose(k); clearTrail(k.userData); k.position.x=k.userData.baseX; k.position.z=0; k.rotation.z=0; }); }
+function startDeath(k){ if(!k) return; const an=k.userData.anim; an.death=0; an.deathT=0; an.swing=null; an.knock=-1; clearTrail(k.userData); }
 const TRAIL_MAX=16;
 function makeTrailMesh(){
   const geo=new THREE.BufferGeometry();
@@ -864,6 +867,9 @@ function initScene(){
   const clock=new THREE.Clock();
   (function loop(){ requestAnimationFrame(loop); const dt=Math.min(clock.getDelta(),.05), t=clock.elapsedTime;
     [knightA,knightB].forEach((k,idx)=>{ if(!k) return; const u=k.userData, an=u.anim;
+      // --- death state: once started, the knight stops fighting and crumples ---
+      let deathE=0, deathSlump=0;
+      if(an.death>=0){ an.swing=null; an.knock=-1; if(an.death<1) an.death=Math.min(1,an.death+dt/.85); const dp=an.death; deathE=1-Math.pow(1-dp,3); if(dp>=1){ an.deathT=Math.min(1,(an.deathT||0)+dt/.8); deathSlump=an.deathT*an.deathT; } }
       // --- jointed swing pose (shoulder/elbow/wrist + torso twist/lean + lunge) ---
       if(an.swing){ an.swing.t+=dt/an.swing.dur; if(an.swing.t>=1) an.swing=null; }
       computePose(_pose, an.swing?an.swing.kind:null, an.swing?an.swing.t:0);
@@ -878,7 +884,7 @@ function initScene(){
       // --- displacement: knockback slide OUT, then walk-forward back into reach ---
       let walking=false;
       if(u.dispAnim){ const da=u.dispAnim; const p=Math.min(1,(performance.now()-da.start)/da.durMs); const e=da.kind==='walk' ? p : 1-Math.pow(1-p,3); u.dispPos=da.from+(da.to-da.from)*e; walking=(da.kind==='walk'&&p<1); if(walking) u.walkPhase+=dt*11+.35; if(p>=1){ u.dispPos=da.to; u.dispAnim=null; } }
-      const bobY=Math.abs(Math.sin(t*2.4+idx*1.7))*.05*(an.swing?.35:1)+(walking?Math.abs(Math.sin(u.walkPhase))*.07:0);
+      const bobY=(Math.abs(Math.sin(t*2.4+idx*1.7))*.05*(an.swing?.35:1)+(walking?Math.abs(Math.sin(u.walkPhase))*.07:0))*(1-deathE);
       u.shR.rotation.set(_pose.shX,0,_pose.shZ); u.elR.rotation.x=_pose.elX; u.wrR.rotation.x=_pose.wrX;
       u.shL.rotation.x=-.4-_pose.shield*.85; u.elL.rotation.x=-.55-_pose.shield*.3;
       u.shieldG.position.set(-.16-_pose.shield*.04,-.38+_pose.shield*.16,_pose.shield*.32);
@@ -888,10 +894,13 @@ function initScene(){
       const walkStep=walking?Math.sin(u.walkPhase)*.5:0; // legs visibly step while closing distance
       u.legL.rotation.x=idleStep-_pose.lunge*.5+_pose.crouch*.45+walkStep;
       u.legR.rotation.x=-idleStep+_pose.lunge*.36-_pose.crouch*.25-walkStep;
+      // --- death overlay: legs fold back (kneeling on the shins), torso slumps
+      // forward, head bows, arms go limp and the shield drops ---
+      if(deathE>0){ u.legL.rotation.x+=1.25*deathE; u.legR.rotation.x+=1.25*deathE; u.torsoG.rotation.x+=.5*deathE+.3*deathSlump; u.headG.rotation.x+=.75*deathE+.3*deathSlump; u.headG.rotation.z+=.18*deathSlump; u.shR.rotation.x+=1.15*deathE; u.shL.rotation.x+=.6*deathE; u.shieldG.position.y-=.18*deathE; }
       if(u.cape) u.cape.rotation.x=.12+Math.sin(t*1.8+idx)*.05+_pose.lean*.35;
       k.position.x=standX(k)+u.facing*_pose.lunge+kx;
-      k.position.y=bobY-_pose.crouch;
-      k.position.z=0; k.rotation.z=tilt;
+      k.position.y=bobY-_pose.crouch-.55*deathE;
+      k.position.z=0; k.rotation.z=tilt*(1-deathE);
       updateTrail(u,dt);
       if(u.blob){ u.blob.position.x=k.position.x; u.blob.position.z=k.position.z; const bs=1+Math.abs(kx)*.25+_pose.crouch*.4; u.blob.scale.set(bs,bs,1); }
     });
