@@ -22,6 +22,9 @@ button:active{transform:scale(.96)}
 #loginScreen .row{display:flex;gap:8px}
 #loginScreen .row button{flex:1;padding:13px 6px;font-weight:700}
 #btnRegister{background:linear-gradient(180deg,#8a6d14,#5f4a0c);border-color:var(--gold2)}
+#btnFacebook{width:100%;background:#1877F2;border:1px solid #1877F2;color:#fff;font-weight:700;padding:12px 6px;border-radius:10px;font-size:15px}
+#btnFacebook .fbF{display:inline-block;background:#fff;color:#1877F2;font-weight:900;border-radius:4px;width:20px;height:20px;line-height:20px;text-align:center;margin-right:8px;font-size:16px;vertical-align:-3px}
+.loginOr{text-align:center;color:var(--mut);font-size:12px;margin:2px 0}
 #authErr{color:#ef9a9a;margin:0;min-height:18px;text-align:center;font-size:13px}
 
 /* ---------- GAME: 100dvh flex column, page never scrolls ---------- */
@@ -128,6 +131,8 @@ select{background:#0d0a05;color:var(--ink);padding:7px;border-radius:8px;border:
   <input id="uname" placeholder="Username" autocomplete="username">
   <input id="pword" type="password" placeholder="Password (3+ chars)" autocomplete="current-password">
   <div class="row"><button id="btnRegister">Register (start 50 gp)</button><button id="btnLogin">Log in</button></div>
+  <p class="loginOr">— or —</p>
+  <button id="btnFacebook" type="button"><span class="fbF">f</span>Log in with Facebook</button>
   <p id="authErr"></p>
 </div>
 
@@ -256,10 +261,19 @@ function connect(cb){
   ws.onmessage=ev=>handle(JSON.parse(ev.data));
   ws.onclose=()=>{ toast('Disconnected. Refresh to reconnect.'); if(duel) endDuelUI(); };
 }
-function send(o){ if(ws&&ws.readyState===1) ws.send(JSON.stringify(o)); else if(o.type==='register'||o.type==='login') pendingAuth=o; }
+function send(o){ if(ws&&ws.readyState===1) ws.send(JSON.stringify(o)); else if(o.type==='register'||o.type==='login'||o.type==='fbLogin') pendingAuth=o; }
 function doAuth(type){ ensureAudio(); pendingAuth={type,username:$('uname').value,password:$('pword').value}; if(!ws||ws.readyState>1) connect(); else if(ws.readyState===1){ ws.send(JSON.stringify(pendingAuth)); pendingAuth=null; } }
 $('btnRegister').onclick=()=>doAuth('register');
 $('btnLogin').onclick=()=>doAuth('login');
+$('btnFacebook').onclick=()=>{ ensureAudio(); window.location.assign('/auth/facebook'); };
+// Returning from Facebook login: /?fbtoken=<one-time token>. Strip it from the
+// address bar, then queue the fbLogin exactly like a normal auth (sent when
+// the websocket opens — the same queue that fixed the auth race).
+(function(){
+  const q=new URLSearchParams(window.location.search);
+  const t=q.get('fbtoken');
+  if(t){ try{ history.replaceState(null,'',window.location.pathname); }catch(e){} pendingAuth={type:'fbLogin',token:t}; }
+})();
 connect();
 
 const WORD_COLORS={'SLASH!':'#ffb74d','SMASH!':'#ff5252','BLOCKED!':'#64b5f6','CLASH!':'#ce93d8','GUARDED':'#a5d6a7'};
