@@ -1,10 +1,14 @@
 'use strict';
 // Duelgame Online — real-player online version of the 3-Tick Duel Arena.
 // Server-authoritative: gold, stakes, escrow, combat ticks and records live here.
-// Combat rules are EXACTLY the duelgame's (see game.ts in the 3-Tick Duel Arena):
+// Combat rules are the duelgame's (see game.ts in the 3-Tick Duel Arena):
 //   Attack beats Strength (4 dmg, "SLASH!"), Strength beats Defence (6 dmg, "SMASH!"),
-//   Defence beats Attack (2 dmg, "BLOCKED!"). Same move: clash 1/1 except
-//   defence/defence = 0/0 "GUARDED". MAX_HP 30. 3 ticks/sec, exchange every 3 ticks.
+//   Defence beats Attack (2 dmg, "BLOCKED!"). MAX_HP 30. 3 ticks/sec, exchange every 3 ticks.
+// Rebalanced 2026-11-26 (Derek-approved fix plan, from the honest playtest): same move
+//   clash is 2/2 (was 1/1 — too many dead exchanges); GUARDED arms a +1 "riposte" for
+//   the next exchange's winner; a 3rd consecutive Defence blocks for 0 (anti-turtle).
+//   Both duel-layer effects live in the duel timer; resolveExchange stays pure apart
+//   from the clash number itself.
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
@@ -35,7 +39,7 @@ const adsConfigured = () => /^\d{10,}$/.test(ADSENSE_PUB_ID);
 // ---------- Outfits (same 7, same prices/colors as game.ts OUTFITS) ----------
 const OUTFITS = [
   { id: 'peasant', name: 'Peasant Rags', price: 0,    net: 0,  blurb: 'What you walked in wearing.', colors: { armor: '#9a8a72', trim: '#6b5d49', plume: '#b0a58e', shield: '#8a7a5f' } },
-  { id: 'bronze',  name: 'Bronze Trim',  price: 75,   net: 0,  blurb: 'First real metal. Smells like victory.', colors: { armor: '#a8763e', trim: '#6e4a24', plume: '#d99a4e', shield: '#8a5c2e' } },
+  { id: 'bronze',  name: 'Bronze Trim',  price: 40,   net: null,  blurb: 'First real metal. Smells like victory.', colors: { armor: '#a8763e', trim: '#6e4a24', plume: '#d99a4e', shield: '#8a5c2e' } },
   { id: 'steel',   name: 'Steel Plate',  price: 200,  net: 5,  blurb: 'Polished plate that turns heads at the gate.', colors: { armor: '#9fb2c8', trim: '#5f7189', plume: '#dfe9f5', shield: '#7d93ad' } },
   { id: 'shadow',  name: 'Shadow Cloak', price: 350,  net: 10, blurb: 'Dark leathers for fighters who strike first.', colors: { armor: '#3d4457', trim: '#232833', plume: '#6b7690', shield: '#2e3442' } },
   { id: 'mithril', name: 'Mithril Shine',price: 450,  net: 20, blurb: 'Blue-purple sheen, light as cloth, hard as a vault door.', colors: { armor: '#7d7fd6', trim: '#4a4a9e', plume: '#b9b9f2', shield: '#5f5fb8' } },
@@ -52,7 +56,7 @@ function enforceNetGear(u) {
   // Returns the list of stripped outfit ids. Peasant (net 0) can never strip.
   if (!u || !Array.isArray(u.owned)) return [];
   const net = netOf(u);
-  const stripped = u.owned.filter(id => { const o = outfitById(id); return o && (o.net || 0) > net; });
+  const stripped = u.owned.filter(id => { const o = outfitById(id); return o && o.net != null && o.net > net; });
   if (stripped.length) {
     u.owned = u.owned.filter(id => !stripped.includes(id));
     if (stripped.includes(u.outfit)) u.outfit = 'peasant';
@@ -73,7 +77,7 @@ function resolveExchange(a, b) {
   // returns {aDmg: damage dealt TO a, bDmg: damage dealt TO b, word, winner:'a'|'b'|'clash'}
   if (a === b) {
     if (a === 'defence') return { aDmg: 0, bDmg: 0, word: 'GUARDED', winner: 'clash' };
-    return { aDmg: 1, bDmg: 1, word: 'CLASH!', winner: 'clash' };
+    return { aDmg: 2, bDmg: 2, word: 'CLASH!', winner: 'clash' };
   }
   const wordFor = m => m === 'defence' ? 'BLOCKED!' : m === 'strength' ? 'SMASH!' : 'SLASH!';
   if (BEATS[a] === b) return { aDmg: 0, bDmg: WIN_DAMAGE[a], word: wordFor(a), winner: 'a' };
@@ -136,7 +140,31 @@ const botById = id => BOTS.find(b => b.id === id);
 // Live bot state (duel occupancy + record for the lobby list)
 const botState = {}; BOTS.forEach(b => botState[b.id] = { duelId: null, wins: 0, losses: 0 });
 
-function pickBotMove(bot, playerHistory) {
+function favouriteOf(history) {
+  if (!history || history.length < 3) return null;
+  const counts = { attack: 0, strength: 0, defence: 0 };
+  for (const m of history) counts[m]++;
+  const fav = MOVES.reduce((x, y) => (counts[y] > counts[x] ? y : x));
+  return counts[fav] >= 3 ? fav : null;
+}
+// Bot habits a player can SEE and exploit (fix plan B5): Pip guards twice after
+// being smashed; Mara never defends twice in a row; Bram, once you've leaned on
+// one move 3+ times, gets a visible warning beat ("warn") and then counters it.
+function pickBotMove(bot, duel) {
+  const mem = duel.botMemory || (duel.botMemory = { guard: 0, warn: false, lastMove: null });
+  if (bot.id === 'pip' && mem.guard > 0) { mem.guard--; mem.lastMove = 'defence'; return 'defence'; }
+  if (bot.id === 'bram' && mem.warn) {
+    mem.warn = false;
+    const fav = favouriteOf(duel.historyA);
+    if (fav) { const mv = MOVES.find(m => BEATS[m] === fav); mem.lastMove = mv; return mv; }
+  }
+  let mv = pickBotMoveWeighted(bot, duel.historyA);
+  if (bot.id === 'mara' && mv === 'defence' && mem.lastMove === 'defence') mv = Math.random() < 0.5 ? 'attack' : 'strength';
+  mem.lastMove = mv;
+  return mv;
+}
+const PRACTICE_PATTERN = ['defence', 'defence', 'attack', 'strength', 'defence', 'attack', 'strength', 'strength'];
+function pickBotMoveWeighted(bot, playerHistory) {
   // Port of game.ts pickOpponentMove: cunning counters the player's favourite.
   if (playerHistory.length >= 3 && Math.random() < bot.cunning) {
     const counts = { attack: 0, strength: 0, defence: 0 };
@@ -168,7 +196,7 @@ function saveDbNow() {
 function hashPw(password, salt) { return crypto.scryptSync(String(password), salt, 32).toString('hex'); }
 function newUser(password) {
   const salt = crypto.randomBytes(16).toString('hex');
-  return { salt, hash: hashPw(password, salt), gold: 50, owned: ['peasant'], outfit: 'peasant', wins: 0, losses: 0, trophies: 0, fights: 0, adBreakPending: false, adDay: '', adClaims: 0, campaign: { active: false, round: 0, won: [] } };
+  return { salt, hash: hashPw(password, salt), gold: 50, owned: ['peasant'], outfit: 'peasant', wins: 0, losses: 0, trophies: 0, fights: 0, adBreakPending: false, adDay: '', adClaims: 0, campaign: { active: false, round: 0, won: [] }, practiced: false, lastWinDay: '', campaignBest: 0 };
 }
 function checkPw(user, password) {
   const h = Buffer.from(hashPw(password, user.salt), 'hex');
@@ -363,15 +391,56 @@ function broadcast(obj, except) { for (const [name, c] of clients) if (name !== 
 function publicPlayer(name) {
   const u = db.users[name]; const c = clients.get(name);
   const o = outfitById(u ? u.outfit : 'peasant');
-  return { username: name, gold: u ? u.gold : 0, wins: u ? u.wins : 0, losses: u ? u.losses : 0, outfit: o.id, colors: o.colors, inDuel: !!(c && c.duelId) };
+  let vs = null, stake = 0, campRound = 0;
+  if (c && c.duelId) { const d = duels.get(c.duelId); if (d) { vs = d.a === name ? d.b : d.a; stake = d.stake; campRound = d.campaign ? d.round : 0; } }
+  return { username: name, gold: u ? u.gold : 0, wins: u ? u.wins : 0, losses: u ? u.losses : 0, outfit: o.id, colors: o.colors, inDuel: !!(c && c.duelId), trophies: u ? (u.trophies || 0) : 0, vs, stake, campRound };
 }
 function playerList() {
   const list = [];
   for (const name of clients.keys()) list.push(publicPlayer(name));
-  for (const b of BOTS) list.push({ username: b.name, isBot: true, botId: b.id, title: b.title, stake: b.stake, taunt: b.taunt, gold: null, wins: botState[b.id].wins, losses: botState[b.id].losses, outfit: null, colors: b.colors, inDuel: !!botState[b.id].duelId, campaignOnly: !!b.campaignOnly });
+  for (const b of BOTS) {
+    let vs = null;
+    const did = botState[b.id].duelId;
+    if (did) { const d = duels.get(did); if (d) vs = d.a === b.name ? d.b : d.a; }
+    list.push({ username: b.name, isBot: true, botId: b.id, title: b.title, stake: b.stake, taunt: b.taunt, gold: null, wins: botState[b.id].wins, losses: botState[b.id].losses, outfit: null, colors: b.colors, inDuel: !!did, campaignOnly: !!b.campaignOnly, trophies: 0, vs, stake: b.stake, campRound: 0 });
+  }
   return list;
 }
-function broadcastPlayers() { const l = playerList(); broadcast({ type: 'players', players: l }); }
+function duelSummary() {
+  return [...duels.values()].map(d => ({ duelId: d.id, a: d.a, b: d.b, stake: d.stake, campaign: !!d.campaign, round: d.round || 0, practice: !!d.practice, hpA: Math.max(0, d.hp.a), hpB: Math.max(0, d.hp.b) }));
+}
+function broadcastPlayers() { const l = playerList(); broadcast({ type: 'players', players: l, duels: duelSummary() }); }
+// ---------- Challenge queue (Derek, 2026-11-26): challenging a player who is
+// mid-fight must not vanish into silence. The challenger is told at once, and
+// the offer is delivered the moment the target's fight ends. ----------
+const challengeQueue = new Map(); // targetUsername -> [{from, stake, expires}]
+function queuedOutFor(name) {
+  const out = [];
+  for (const [target, q] of challengeQueue) for (const e of q) if (e.from === name) out.push({ target, stake: e.stake });
+  return out;
+}
+function deliverQueued(name) {
+  const tc = clients.get(name); if (!tc) return;
+  if (pending.has(name)) return; // a live offer is already on their screen
+  const q = challengeQueue.get(name); if (!q) return;
+  while (q.length) {
+    const e = q[0];
+    const fc = clients.get(e.from); const fu = db.users[e.from]; const tu = db.users[name];
+    const expired = Date.now() > e.expires;
+    if (expired || !fc || !fu || fc.duelId || !tu || fu.gold < e.stake || tu.gold < e.stake) {
+      q.shift();
+      if (fc && !expired) send(fc.ws, { type: 'error', message: 'Your queued challenge to ' + name + ' lapsed — ' + (fc.duelId ? 'you are in a duel now.' : 'it can no longer be afforded.') });
+      continue;
+    }
+    q.shift();
+    pending.set(name, { from: e.from, stake: e.stake, expires: Date.now() + 30000 });
+    send(tc.ws, { type: 'challengeIncoming', from: e.from, stake: e.stake, queued: true });
+    send(fc.ws, { type: 'challengeSent', to: name, stake: e.stake, queued: true });
+    personalState(e.from);
+    break;
+  }
+  if (!q.length) challengeQueue.delete(name);
+}
 const AD_GOLD_AMOUNT = 10, AD_GOLD_DAILY_CAP = 5, AD_WATCH_MS = 30000;
 function adDayStr() { return new Date().toLocaleDateString('en-CA', { timeZone: 'America/Indiana/Indianapolis' }); }
 function adClaimsLeft(u) { return u.adDay === adDayStr() ? Math.max(0, AD_GOLD_DAILY_CAP - (u.adClaims || 0)) : AD_GOLD_DAILY_CAP; }
@@ -379,7 +448,7 @@ function personalState(name) {
   const u = db.users[name]; if (!u) return;
   enforceNetGear(u);
   const c = clients.get(name);
-  send(c && c.ws, { type: 'state', gold: u.gold, wins: u.wins, losses: u.losses, owned: u.owned, outfit: u.outfit, trophies: u.trophies || 0, fights: u.fights || 0, adBreakPending: !!u.adBreakPending, adClaimsLeft: adClaimsLeft(u), adGoldAmount: AD_GOLD_AMOUNT, campaign: campaignOf(u) });
+  send(c && c.ws, { type: 'state', gold: u.gold, wins: u.wins, losses: u.losses, owned: u.owned, outfit: u.outfit, trophies: u.trophies || 0, fights: u.fights || 0, adBreakPending: !!u.adBreakPending, adClaimsLeft: adClaimsLeft(u), adGoldAmount: AD_GOLD_AMOUNT, campaign: campaignOf(u), practiced: !!u.practiced, campaignBest: u.campaignBest || 0, queuedOut: queuedOutFor(name) });
 }
 function sysChat(text) { broadcast({ type: 'chat', from: '⚔️ Duelgame', text, kind: 'system' }); }
 
@@ -387,11 +456,12 @@ function sysChat(text) { broadcast({ type: 'chat', from: '⚔️ Duelgame', text
 function startDuel(nameA, nameB, stake, opts) {
   opts = opts || {};
   const isCampaign = !!opts.campaign;
+  const isPractice = !!opts.practice;
   const botDef = botByName(nameB);
   const isBotDuel = !!botDef;
   const ua = db.users[nameA];
   let ub = null;
-  if (isCampaign) { stake = 0; } // campaign duels take NO stake — prize only, paid once at settle
+  if (isCampaign || isPractice) { stake = 0; } // campaign + practice duels take NO stake
   else {
     ua.gold -= stake;
     if (!isBotDuel) { ub = db.users[nameB]; ub.gold -= stake; }
@@ -399,10 +469,14 @@ function startDuel(nameA, nameB, stake, opts) {
   saveDb();
   const id = 'duel' + (duelSeq++);
   const duel = {
-    id, a: nameA, b: nameB, stake, pot: isCampaign ? 0 : stake * 2, isBotDuel, botId: isBotDuel ? botDef.id : null,
-    campaign: isCampaign, round: isCampaign ? opts.round : 0, prize: isCampaign ? opts.prize : 0,
+    id, a: nameA, b: nameB, stake, pot: (isCampaign || isPractice) ? 0 : stake * 2, isBotDuel, botId: isBotDuel ? botDef.id : null,
+    campaign: isCampaign, practice: isPractice, round: isCampaign ? opts.round : 0, prize: isCampaign ? opts.prize : 0,
     hp: { a: MAX_HP, b: MAX_HP },
     offBalance: { a: false, b: false }, // took >=2 dmg last exchange: next win glances
+    riposte: { a: false, b: false },    // GUARDED armed it: next exchange's winner +1
+    defStreak: { a: 0, b: 0 },          // consecutive Defence picks (3rd+ blocks for 0)
+    botMemory: { guard: 0, warn: false, lastMove: null },
+    exch: 0,
     disp: { a: 0, b: 0 },               // authoritative knockback displacement per fighter
     locked: { a: null, b: null }, last: { a: 'attack', b: 'attack' },
     historyA: [], tick: 0, settled: false, phase: 'countdown', timer: null,
@@ -414,8 +488,9 @@ function startDuel(nameA, nameB, stake, opts) {
   personalState(nameA); if (ub) personalState(nameB);
   broadcastPlayers();
   const colorsOf = n => { const bot = botByName(n); if (bot) return bot.colors; const u = db.users[n]; return outfitById(u ? u.outfit : 'peasant').colors; };
-  broadcast({ type: 'duelStart', duelId: id, a: nameA, b: nameB, stake, pot: duel.pot, hpA: MAX_HP, hpB: MAX_HP, colorsA: colorsOf(nameA), colorsB: colorsOf(nameB), homeGap: HOME_GAP, reachGap: REACH_GAP, dispA: 0, dispB: 0, campaign: isCampaign, round: duel.round, prize: duel.prize });
+  broadcast({ type: 'duelStart', duelId: id, a: nameA, b: nameB, stake, pot: duel.pot, hpA: MAX_HP, hpB: MAX_HP, colorsA: colorsOf(nameA), colorsB: colorsOf(nameB), homeGap: HOME_GAP, reachGap: REACH_GAP, dispA: 0, dispB: 0, campaign: isCampaign, practice: isPractice, round: duel.round, prize: duel.prize });
   if (isCampaign) sysChat(`🏆 Campaign Round ${duel.round}: ${nameA} vs ${nameB} — ${duel.prize} gp prize!`);
+  else if (isPractice) sysChat(`🎓 ${nameA} is learning the ropes — practice duel vs ${nameB}, no gold on the line.`);
   else sysChat(`${nameA} vs ${nameB} — ${stake} gp each in the pit!`);
   let count = 3;
   broadcast({ type: 'duelCountdown', duelId: id, n: count });
@@ -433,29 +508,56 @@ function startDuel(nameA, nameB, stake, opts) {
     duel.tick++;
     broadcast({ type: 'duelTick', duelId: id, tick: duel.tick, tickInExchange: ((duel.tick - 1) % 3) + 1 });
     if (duel.tick % 3 !== 0) return;
-    if (duel.isBotDuel) duel.locked.b = pickBotMove(botDef, duel.historyA);
+    // Practice duel: the first 3 exchanges WAIT for the learner's tap — no
+    // auto-play while they're still reading the screen (playtest fix 1.1).
+    if (duel.practice && duel.exch < 3 && !duel.locked.a) return;
+    if (duel.isBotDuel) duel.locked.b = duel.practice ? PRACTICE_PATTERN[duel.exch % PRACTICE_PATTERN.length] : pickBotMove(botDef, duel);
     const moveA = duel.locked.a || duel.last.a;
     const moveB = duel.locked.b || duel.last.b;
     duel.last.a = moveA; duel.last.b = moveB;
     duel.historyA.push(moveA);
     duel.locked.a = null; if (!duel.isBotDuel) duel.locked.b = null;
+    duel.defStreak.a = moveA === 'defence' ? duel.defStreak.a + 1 : 0;
+    duel.defStreak.b = moveB === 'defence' ? duel.defStreak.b + 1 : 0;
     // Walk-forward happened during this cycle: displaced fighters close back into reach.
     const walked = applyWalkForward(duel.disp);
     const r = resolveExchange(moveA, moveB);
+    // Riposte: GUARDED arms +1 for the NEXT exchange's winner; any other
+    // exchange spends it. Anti-turtle: a 3rd straight Defence blocks for 0.
+    let riposteSide = null, turtleSide = null;
+    if (r.word === 'GUARDED') { duel.riposte.a = true; duel.riposte.b = true; }
+    else {
+      if ((r.winner === 'a' || r.winner === 'b') && duel.riposte[r.winner]) {
+        riposteSide = r.winner;
+        if (r.winner === 'a') r.bDmg += 1; else r.aDmg += 1;
+      }
+      duel.riposte.a = false; duel.riposte.b = false;
+    }
     // Glancing hit: an off-balance fighter who WINS the triangle lands it weakly.
     // Winner never changes; clash/GUARDED never glance. offBalance is consumed either way.
     let glance = null;
     if (r.winner === 'a' && duel.offBalance.a) { glance = 'a'; r.bDmg = Math.max(1, r.bDmg - 1); }
     else if (r.winner === 'b' && duel.offBalance.b) { glance = 'b'; r.aDmg = Math.max(1, r.aDmg - 1); }
+    if (r.word === 'BLOCKED!') { // winner is the defender; turtle check last so the block truly absorbs
+      const w = r.winner;
+      if (duel.defStreak[w] >= 3) { turtleSide = w; if (w === 'a') r.bDmg = 0; else r.aDmg = 0; }
+    }
     const wasOff = { a: duel.offBalance.a, b: duel.offBalance.b };
     duel.hp.a -= r.aDmg; duel.hp.b -= r.bDmg;
+    duel.exch++;
+    // Bot habits react: Pip, smashed, guards twice; Bram starts watching a leaned-on move.
+    let warnBram = false;
+    if (duel.isBotDuel && botDef) {
+      if (botDef.id === 'pip' && r.bDmg >= 6) duel.botMemory.guard = 2;
+      if (botDef.id === 'bram' && !duel.botMemory.warn && favouriteOf(duel.historyA)) { duel.botMemory.warn = true; warnBram = true; }
+    }
     // Knockback from THIS exchange's damage; offBalance re-sets from damage taken now.
     const kbA = knockbackFor(r.aDmg), kbB = knockbackFor(r.bDmg);
     duel.disp.a = Math.round((duel.disp.a + kbA) * 1000) / 1000;
     duel.disp.b = Math.round((duel.disp.b + kbB) * 1000) / 1000;
     duel.offBalance.a = r.aDmg >= 2;
     duel.offBalance.b = r.bDmg >= 2;
-    broadcast({ type: 'duelExchange', duelId: id, a: duel.a, b: duel.b, moveA, moveB, aDmg: r.aDmg, bDmg: r.bDmg, word: r.word, winnerSide: r.winner, hpA: Math.max(0, duel.hp.a), hpB: Math.max(0, duel.hp.b), kbA, kbB, glance, glanceA: glance === 'a', glanceB: glance === 'b', dispA: duel.disp.a, dispB: duel.disp.b, walkedA: walked.a, walkedB: walked.b, offBalanceA: wasOff.a, offBalanceB: wasOff.b });
+    broadcast({ type: 'duelExchange', duelId: id, a: duel.a, b: duel.b, moveA, moveB, aDmg: r.aDmg, bDmg: r.bDmg, word: r.word, winnerSide: r.winner, hpA: Math.max(0, duel.hp.a), hpB: Math.max(0, duel.hp.b), kbA, kbB, glance, glanceA: glance === 'a', glanceB: glance === 'b', dispA: duel.disp.a, dispB: duel.disp.b, walkedA: walked.a, walkedB: walked.b, offBalanceA: wasOff.a, offBalanceB: wasOff.b, riposte: riposteSide, turtle: turtleSide, warnBram, practice: !!duel.practice, exch: duel.exch });
     if (duel.hp.a <= 0 || duel.hp.b <= 0) {
       let winner;
       if (duel.hp.a <= 0 && duel.hp.b <= 0) winner = duel.hp.a === duel.hp.b ? duel.a : (duel.hp.a > duel.hp.b ? duel.a : duel.b);
@@ -471,18 +573,22 @@ function settleDuel(duel, winnerName, reason) {
   duel.settled = true;
   // Ad breaks: count every completed fight per human player, server-side so a
   // refresh cannot dodge it. Every 5th fight raises a pending ad break.
-  [duel.a, duel.b].forEach(n => { const u = db.users[n]; if (u) { u.fights = (u.fights || 0) + 1; if (u.fights % 5 === 0) u.adBreakPending = true; } });
+  // Practice duels don't count — they're lessons, not fights.
+  if (!duel.practice) [duel.a, duel.b].forEach(n => { const u = db.users[n]; if (u) { u.fights = (u.fights || 0) + 1; if (u.fights % 5 === 0) u.adBreakPending = true; } });
   if (duel.timer) clearInterval(duel.timer);
   const loserName = winnerName === duel.a ? duel.b : duel.a;
   const winnerBot = botByName(winnerName), loserBot = botByName(loserName);
-  let prizeWon = 0, trophyWon = false;
-  if (duel.campaign) {
+  let prizeWon = 0, trophyWon = false, dailyBonus = 0;
+  if (duel.practice) {
+    // Practice settle: no gold, no W/L, no bot record — pure lesson.
+  } else if (duel.campaign) {
     // Campaign settle: NO pot exists. Human is duel.a. Win = minted prize paid
     // exactly once (this function is guarded by duel.settled) + run advances;
     // clearing round 4 also mints a trophy. Loss = run ends, prizes kept.
     const human = db.users[duel.a];
     if (human) {
       campaignOf(human); // ensure campaign/trophies fields exist
+      human.campaignBest = Math.max(human.campaignBest || 0, duel.round);
       if (winnerName === duel.a) {
         prizeWon = duel.prize;
         human.gold += duel.prize; human.wins += 1;
@@ -502,6 +608,8 @@ function settleDuel(duel, winnerName, reason) {
     if (!loserBot) { const l = db.users[loserName]; if (l) l.losses += 1; }
     else botState[loserBot.id].losses += 1;
   }
+  // Daily first-win bonus (fix plan C): +10 gp once per day for a human winner.
+  if (!duel.practice && !winnerBot) { const w = db.users[winnerName]; if (w) { const today = adDayStr(); if (w.lastWinDay !== today) { w.lastWinDay = today; w.gold += 10; dailyBonus = 10; } } }
   // Net-gear rule: a loss can drop a fighter's net score below their armour's
   // requirement — that armour is lost and must be rebought when re-earned.
   for (const n of [duel.a, duel.b]) { const u = db.users[n]; if (u) enforceNetGear(u); }
@@ -510,12 +618,16 @@ function settleDuel(duel, winnerName, reason) {
   if (!duel.isBotDuel) { const cb = clients.get(duel.b); if (cb && cb.duelId === duel.id) cb.duelId = null; }
   if (duel.botId && botState[duel.botId].duelId === duel.id) botState[duel.botId].duelId = null;
   duels.delete(duel.id);
-  broadcast({ type: 'duelEnd', duelId: duel.id, winner: winnerName, loser: loserName, pot: duel.pot, reason, campaign: !!duel.campaign, round: duel.round || 0, prize: prizeWon, trophy: trophyWon });
-  if (duel.campaign) sysChat(prizeWon ? `🏆 ${winnerName} cleared Campaign Round ${duel.round} and won ${prizeWon} gp${trophyWon ? ' + a TROPHY!' : ''}` : `🏆 ${loserName}'s campaign run ended in Round ${duel.round} — ${winnerName} holds the pit.`);
+  broadcast({ type: 'duelEnd', duelId: duel.id, winner: winnerName, loser: loserName, pot: duel.pot, reason, campaign: !!duel.campaign, practice: !!duel.practice, round: duel.round || 0, prize: prizeWon, trophy: trophyWon, dailyBonus });
+  if (duel.practice) sysChat(`🎓 Practice over: ${winnerName} beat ${loserName} — no gold changed hands.`);
+  else if (duel.campaign) sysChat(prizeWon ? `🏆 ${winnerName} cleared Campaign Round ${duel.round} and won ${prizeWon} gp${trophyWon ? ' + a TROPHY!' : ''}` : `🏆 ${loserName}'s campaign run ended in Round ${duel.round} — ${winnerName} holds the pit.`);
   else sysChat(`🏆 ${winnerName} beat ${loserName} and took the ${duel.pot} gp pot!`);
   if (!winnerBot) personalState(winnerName);
   if (!loserBot) personalState(loserName);
   broadcastPlayers();
+  // Freed fighters get their queued challenges now (Derek's no-one-ignored rule).
+  if (db.users[duel.a]) deliverQueued(duel.a);
+  if (!duel.isBotDuel && db.users[duel.b]) deliverQueued(duel.b);
   return true;
 }
 
@@ -534,7 +646,8 @@ wss.on('connection', ws => {
     if (clients.has(name)) { const old = clients.get(name); try { old.ws.close(); } catch {} }
     clients.set(name, { ws, duelId: null });
     const u = db.users[name];
-    send(ws, { type: 'authOk', username: name, gold: u.gold, wins: u.wins, losses: u.losses, owned: u.owned, outfit: u.outfit, outfits: OUTFITS, bots: BOTS, players: playerList(), trophies: u.trophies || 0, fights: u.fights || 0, adBreakPending: !!u.adBreakPending, adClaimsLeft: adClaimsLeft(u), adGoldAmount: AD_GOLD_AMOUNT, campaign: campaignOf(u), campaignRounds: campaignInfo() });
+    send(ws, { type: 'authOk', username: name, gold: u.gold, wins: u.wins, losses: u.losses, owned: u.owned, outfit: u.outfit, outfits: OUTFITS, bots: BOTS, players: playerList(), trophies: u.trophies || 0, fights: u.fights || 0, adBreakPending: !!u.adBreakPending, adClaimsLeft: adClaimsLeft(u), adGoldAmount: AD_GOLD_AMOUNT, campaign: campaignOf(u), campaignRounds: campaignInfo(), practiced: !!u.practiced, campaignBest: u.campaignBest || 0, queuedOut: queuedOutFor(name) });
+    setTimeout(() => deliverQueued(name), 600); // an offer queued while they were away lands once they're in
     broadcastPlayers();
     sysChat(`${name} entered the lobby.`);
     return name;
@@ -581,7 +694,7 @@ wss.on('connection', ws => {
     }
     if (m.type === 'adWatchStart') {
       myClient.adWatchAt = Date.now();
-      send(ws, { type: 'adWatchStarted', needMs: AD_WATCH_MS });
+      send(ws, { type: 'adWatchStarted', needMs: AD_WATCH_MS, serverNow: Date.now(), endsAt: Date.now() + AD_WATCH_MS });
       return;
     }
     if (m.type === 'claimAdGold') {
@@ -604,7 +717,7 @@ wss.on('connection', ws => {
     if (m.type === 'buy') {
       const o = outfitById(m.outfitId);
       if (myUser.owned.includes(o.id)) { myUser.outfit = o.id; saveDb(); personalState(me); broadcastPlayers(); return; }
-      if ((o.net || 0) > netOf(myUser)) return send(ws, { type: 'error', message: `${o.name} needs a net score of +${o.net} (wins − losses). Yours is ${netOf(myUser) >= 0 ? '+' : ''}${netOf(myUser)}.` });
+      if (o.net != null && o.net > netOf(myUser)) return send(ws, { type: 'error', message: `${o.name} needs a net score of +${o.net} (wins − losses). Yours is ${netOf(myUser) >= 0 ? '+' : ''}${netOf(myUser)}.` });
       if (myUser.gold < o.price) return send(ws, { type: 'error', message: 'Not enough gold for that outfit.' });
       myUser.gold -= o.price; myUser.owned.push(o.id); myUser.outfit = o.id; saveDb();
       personalState(me); broadcastPlayers();
@@ -613,7 +726,7 @@ wss.on('connection', ws => {
     if (m.type === 'equip') {
       const o = outfitById(m.outfitId);
       if (!myUser.owned.includes(o.id)) return send(ws, { type: 'error', message: "You don't own that outfit." });
-      if ((o.net || 0) > netOf(myUser)) return send(ws, { type: 'error', message: `${o.name} needs a net score of +${o.net} (wins − losses).` });
+      if (o.net != null && o.net > netOf(myUser)) return send(ws, { type: 'error', message: `${o.name} needs a net score of +${o.net} (wins − losses).` });
       myUser.outfit = o.id; saveDb();
       personalState(me); broadcastPlayers();
       return;
@@ -627,7 +740,10 @@ wss.on('connection', ws => {
         if (botDef.campaignOnly) return send(ws, { type: 'error', message: 'The Arena Champion only fights in a Campaign final — enter in the 🏆 Campaign tab.' });
         if (stake !== botDef.stake) return send(ws, { type: 'error', message: `${botDef.name} fights for ${botDef.stake} gp.` });
         if (myUser.gold < stake) return send(ws, { type: 'error', message: "You can't afford that stake." });
-        if (botState[botDef.id].duelId) return send(ws, { type: 'error', message: `${botDef.name} is already fighting.` });
+        if (botState[botDef.id].duelId) { const bd = duels.get(botState[botDef.id].duelId); const opp = bd ? (bd.a === botDef.name ? bd.b : bd.a) : 'someone'; return send(ws, { type: 'error', message: `${botDef.name} is fighting ${opp} right now — they'll be free in a few seconds.` }); }
+        // First-ever bot fight vs Pip is a free PRACTICE duel (fix plan B1):
+        // no stake, gentle scripted moves, exchanges wait for the learner's taps.
+        if (botDef.id === 'pip' && !myUser.practiced) { myUser.practiced = true; saveDb(); startDuel(me, botDef.name, stake, { practice: true }); return; }
         startDuel(me, botDef.name, stake);
         return;
       }
@@ -636,11 +752,35 @@ wss.on('connection', ws => {
       if (target === me) return send(ws, { type: 'error', message: "You can't duel yourself." });
       const tc = clients.get(target); const tu = db.users[target];
       if (!tc || !tu) return send(ws, { type: 'error', message: 'That player is not online.' });
-      if (tc.duelId) return send(ws, { type: 'error', message: 'That player is already in a duel.' });
       if (tu.gold < stake) return send(ws, { type: 'error', message: `${target} can't afford ${stake} gp.` });
+      if (tc.duelId) {
+        // Busy target: QUEUE the challenge (Derek's rule) — the challenger is
+        // told who they're fighting, and the offer lands when the fight ends.
+        const td = duels.get(tc.duelId);
+        const vsName = td ? (td.a === target ? td.b : td.a) : 'someone';
+        const q = challengeQueue.get(target) || [];
+        if (q.some(e => e.from === me)) return send(ws, { type: 'error', message: `You already have a challenge queued for ${target}.` });
+        if (q.length >= 3) return send(ws, { type: 'error', message: `${target} already has 3 challenges waiting — try again shortly.` });
+        q.push({ from: me, stake, expires: Date.now() + 90000 });
+        challengeQueue.set(target, q);
+        send(ws, { type: 'challengeQueued', target, stake, vs: vsName });
+        personalState(me);
+        return;
+      }
       pending.set(target, { from: me, stake, expires: Date.now() + 30000 });
       send(tc.ws, { type: 'challengeIncoming', from: me, stake });
       send(ws, { type: 'challengeSent', to: target, stake });
+      return;
+    }
+    if (m.type === 'challengeCancel') {
+      const target = String(m.target || '');
+      const q = challengeQueue.get(target);
+      if (q) {
+        const kept = q.filter(e => e.from !== me);
+        if (kept.length) challengeQueue.set(target, kept); else challengeQueue.delete(target);
+        send(ws, { type: 'challengeQueueCancelled', target });
+        personalState(me);
+      }
       return;
     }
     if (m.type === 'accept') {
@@ -661,6 +801,7 @@ wss.on('connection', ws => {
         const fc = clients.get(p.from);
         if (fc) send(fc.ws, { type: 'error', message: `${me} declined your challenge.` });
       }
+      deliverQueued(me); // a declined offer makes room for the next queued one
       return;
     }
     if (m.type === 'campaignStart') {
@@ -713,6 +854,8 @@ wss.on('connection', ws => {
     const c = clients.get(me);
     clients.delete(me);
     pending.delete(me);
+    challengeQueue.delete(me);
+    for (const [t, q] of challengeQueue) { const kept = q.filter(e => e.from !== me); if (kept.length) challengeQueue.set(t, kept); else challengeQueue.delete(t); }
     if (c && c.duelId) {
       const d = duels.get(c.duelId);
       if (d) settleDuel(d, d.a === me ? d.b : d.a, 'forfeit');
