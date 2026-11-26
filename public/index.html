@@ -176,7 +176,6 @@ select{background:#0d0a05;color:var(--ink);padding:7px;border-radius:8px;border:
   <h1>⚔️ Nallystake</h1>
   <div id="loginKnight"></div>
   <p class="sub">The 3-Tick Duel Arena — now against <b>real online players</b>.</p>
-  <div class="rules">🗡️ <b>Attack</b> beats Strength (4) · 💪 <b>Strength</b> beats Defence (6) · 🛡️ <b>Defence</b> beats Attack (2)<br>Same move: CLASH! 1/1 — defence/defence: GUARDED 0/0. 30 HP, one exchange every second (3 ticks). Hits knock you back — you walk back into reach, and a hit landed while you're still closing in glances for 1 less. Winner takes the pot.</div>
   <input id="uname" placeholder="Username" autocomplete="username">
   <input id="pword" type="password" placeholder="Password (3+ chars)" autocomplete="current-password">
   <div class="row"><button id="btnRegister">Register (start 50 gp)</button><button id="btnLogin">Log in</button></div>
@@ -397,7 +396,7 @@ function handle(m){
     setHp(m.hpA,m.hpB,true); $('winnerBanner').style.display='none'; $('winnerBanner').classList.remove('show'); $('wordBanner').textContent='';
     setKnightColors(knightA,m.colorsA); setKnightColors(knightB,m.colorsB);
     plateNameA=m.a; plateNameB=m.b; refreshNameplates(); // both fighters' names over their heads (bot name included)
-    resetKnightPose(); setSpot(knightA,1,1500); setSpot(knightB,1,1500); // fighters walk in from the gate into the fighting area
+    resetKnightPose(); setSpot(knightA,1,1500); setSpot(knightB,1,1500);
     $('duelStatus').textContent=m.campaign?('🏆 Round '+m.round+' — win the '+m.prize+' gp prize! Pick your move!'):('Pot: '+m.pot+' gp — pick your move!');
     document.querySelectorAll('#moves button').forEach(b=>{ b.classList.remove('locked'); b.disabled=!duel.mine; });
     setCamMode('duel');
@@ -451,7 +450,7 @@ function handle(m){
     return;
   }
 }
-function endDuelUI(){ const wasCampaign=lastDuelCampaign; duel=null; lastDuelCampaign=false; resetKnightPose(); setSpot(knightA,0,1500); setSpot(knightB,0,1500); // fighters walk back out to the gate $('duelPanel').classList.add('hidden'); $('duelCampaignLine').classList.add('hidden'); $('lobbyContent').classList.remove('hidden'); $('panel-fight').classList.remove('dueling'); $('hpOverlay').classList.add('hidden'); $('btnForfeit').classList.add('hidden'); $('countdown').textContent=''; hideCrown(); setCamMode('lobby'); plateNameA=me; plateNameB=null; refreshNameplates(); clearHitLabels(); if(wasCampaign) switchTab('campaign'); }
+function endDuelUI(){ const wasCampaign=lastDuelCampaign; duel=null; lastDuelCampaign=false; resetKnightPose(); setSpot(knightA,0,1500); setSpot(knightB,0,1500); $('duelPanel').classList.add('hidden'); $('duelCampaignLine').classList.add('hidden'); $('lobbyContent').classList.remove('hidden'); $('panel-fight').classList.remove('dueling'); $('hpOverlay').classList.add('hidden'); $('btnForfeit').classList.add('hidden'); $('countdown').textContent=''; hideCrown(); setCamMode('lobby'); plateNameA=me; plateNameB=null; refreshNameplates(); clearHitLabels(); if(wasCampaign) switchTab('campaign'); }
 function renderTrophies(){ $('meTrophyN').textContent=myTrophies; $('meTrophies').classList.toggle('hidden',!(myTrophies>0)); }
 function coinPileSVG(g){ // a gold pile you can SEE grow with the amount
   const coin=(x,y,s)=>'<ellipse cx="'+x+'" cy="'+y+'" rx="'+(6*s)+'" ry="'+(2.6*s)+'" fill="#f7dd7a" stroke="#c9a227" stroke-width="1"/>';
