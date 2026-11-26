@@ -136,6 +136,18 @@ select{background:#0d1330;border-color:#8a6d1473}
 .hpwrap.hit .hpbar{animation:barShake .35s}
 @keyframes barShake{0%,100%{transform:translateX(0)}20%{transform:translateX(-4px)}45%{transform:translateX(4px)}70%{transform:translateX(-3px)}}
 .hpnum{width:24px;text-align:right;font-weight:800;text-shadow:0 1px 4px #000}
+/* HP number rides INSIDE the bar's right end (playtest: edge numerals misread) */
+.hpwrap{position:relative}
+.hpnum{position:absolute;right:5px;top:50%;transform:translateY(-50%);width:auto;color:#fff;z-index:2;pointer-events:none;font-size:12px}
+/* arena ticker: one line that always says what is happening in the room */
+#arenaTicker{flex:0 0 auto;padding:3px 10px;font-size:12px;color:#cdd8ff;background:#0a1028;border-bottom:1px solid #8a6d1455;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-height:15px}
+.howline{margin:0 0 6px;font-size:12px;color:var(--mut);line-height:1.45}
+#btnCampBanner{width:100%;margin:0 0 6px;border-color:#8a6d14;font-weight:700}
+#triLine{margin:2px 0 0;text-align:center;font-size:12.5px;color:#ffe9a3}
+#postFight{border:2px solid #8a6d14;border-radius:10px;background:linear-gradient(180deg,#26305a,#121a3a);padding:8px 10px;margin:0 0 8px;box-shadow:0 4px 14px #000a}
+#postFightTitle{margin:0 0 3px;font-size:16px;font-weight:900}
+#postFightLines{margin:0 0 7px;font-size:13px;line-height:1.5;color:#e8ecff}
+#queueBox .qrow{display:flex;gap:7px;align-items:center;justify-content:space-between;border:1px solid #8a6d1466;border-radius:8px;padding:5px 8px;margin:5px 0;font-size:12.5px;background:#141d42}
 
 /* ---------- Bottom: tab panels + tab bar always visible ---------- */
 #bottom{flex:0 0 208px;max-height:34dvh;display:flex;flex-direction:column;background:#0a1028f5;border-top:1px solid #8a6d14}
@@ -226,6 +238,7 @@ select{background:#0d0a05;color:var(--ink);padding:7px;border-radius:8px;border:
     <button id="btnRefill" class="hidden" title="Free gold when you're broke">🪙 +50</button>
     <button id="btnForfeit" class="hidden" title="Forfeit the duel">🏳️</button>
   </div>
+  <div id="arenaTicker"></div>
 
   <div id="scene">
     <div id="hpOverlay" class="hidden">
@@ -244,8 +257,15 @@ select{background:#0d0a05;color:var(--ink);padding:7px;border-radius:8px;border:
     <div id="tabPanels">
       <section id="panel-fight" class="tabPanel active">
         <div id="lobbyContent">
+          <div id="postFight" class="hidden">
+            <p id="postFightTitle"></p>
+            <p id="postFightLines"></p>
+            <div class="row"><button id="btnRematch">🔁 Rematch</button><button id="btnPickOpp">Pick opponent</button></div>
+          </div>
           <h3 class="sec">⚔️ Fight</h3>
           <p style="margin:4px 0 8px;font-size:13.5px;line-height:1.5">Challenge a 🌐 player, or practice vs a 🤖 bot.</p>
+          <p class="howline">Win gold 🪙 → buy armour 👕 → stake bigger fights. <b>Net</b> = wins − losses — cool armour needs it.</p>
+          <button id="btnCampBanner" onclick="switchTab('campaign')">🏆 Tournament — FREE · win up to 170 gp + 🏆</button>
           <div class="row"><button onclick="switchTab('online')">🌐 Players</button><button onclick="switchTab('bots')">🤖 Bots</button></div>
           <div class="adslot" id="adLobby"><div class="adlabel">Advertisement</div><ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-8773554474653193" data-ad-slot="8109311804" data-ad-format="auto" data-full-width-responsive="true"></ins></div>
           <button id="btnAdGold" onclick="openAdGold()">🎁 Free gold — watch an ad</button>
@@ -261,6 +281,7 @@ select{background:#0d0a05;color:var(--ink);padding:7px;border-radius:8px;border:
             <button id="btnStrength"><span class="mi">💪</span><span class="ml">Strength</span></button>
             <button id="btnDefence"><span class="mi">🛡️</span><span class="ml">Defence</span></button>
           </div>
+          <p id="triLine">🗡️ beats 💪 · 💪 beats 🛡️ · 🛡️ beats 🗡️ — counter their last move!</p>
           <p id="duelStatus"></p>
         </div>
       </section>
@@ -268,6 +289,7 @@ select{background:#0d0a05;color:var(--ink);padding:7px;border-radius:8px;border:
         <h3 class="sec">🌐 Players — <span id="onlineCount">0</span></h3>
         <div class="row"><label>🪙</label><select id="stakeSel"><option>5</option><option selected>10</option><option>25</option><option>50</option><option>100</option><option>250</option></select><button onclick="fbChallenge()" style="background:linear-gradient(180deg,#2b5cb8,#17407f);border-color:#1877F2;color:#fff;font-weight:700">f Challenge friends</button></div>
         <div id="playerList"></div>
+        <div id="queueBox"></div>
       </section>
       <section id="panel-bots" class="tabPanel">
         <h3 class="sec">🤖 Bots</h3>
@@ -322,6 +344,7 @@ select{background:#0d0a05;color:var(--ink);padding:7px;border-radius:8px;border:
   <p id="setupMeta"></p>
   <div class="setupLabel">Your stake (for player duels)</div>
   <div id="setupStakes"></div>
+  <p style="font-size:12px;color:var(--mut);margin:3px 0 0;text-align:center">Bots set their own stakes: Pip 5 · Bram 10 · Mara 25</p>
   <div class="setupLabel">Your armour — tap to wear</div>
   <div id="setupArmour"></div>
   <div id="setupChoices">
@@ -341,6 +364,10 @@ select{background:#0d0a05;color:var(--ink);padding:7px;border-radius:8px;border:
 <script>
 let ws=null, me=null, myOutfits=[], pendingAuth=null, duel=null, lockedMove=null, muted=false, prevHp={a:30,b:30};
 let myCampaign=null, myTrophies=0, myCampaignRounds=[{botId:'pip',name:'Squire Pip',prize:10},{botId:'bram',name:'Hedge Knight Bram',prize:20},{botId:'mara',name:'Pit Dog Mara',prize:40},{botId:'champion',name:'Arena Champion',prize:100}], lastDuelCampaign=false;
+let lastPlayers=[], lastDuels=[], myQueues=new Map(), myCampaignBest=0, pendingPost=null, labelStamp=0, adEndsAt=null;
+let stageDuelId=null;
+const activeDuels=new Map(), minis=new Map(), ringKnights=new Map();
+const COUNTER={attack:'defence',strength:'attack',defence:'strength'}; // the move that BEATS the key move
 const MOVE_META={attack:{icon:'🗡️',label:'ATTACK',color:'#ffb74d'},strength:{icon:'💪',label:'STRENGTH',color:'#ff7043'},defence:{icon:'🛡️',label:'DEFENCE',color:'#64b5f6'}};
 let histA=[], histB=[];
 const $=id=>document.getElementById(id);
@@ -398,11 +425,12 @@ const WORD_COLORS={'SLASH!':'#ffb74d','SMASH!':'#ff5252','BLOCKED!':'#64b5f6','C
 function handle(m){
   if(m.type==='authErr'){ $('authErr').textContent=m.message; return; }
   if(m.type==='authOk'){
-    me=m.username; myOutfits=m.outfits;
+    me=m.username; myOutfits=m.outfits; window._bots=m.bots||[];
     if(m.campaignRounds) myCampaignRounds=m.campaignRounds;
     $('loginScreen').classList.add('hidden'); $('gameScreen').classList.remove('hidden');
     $('meName').textContent='⚔️ '+me; applyState(m); renderShop(); renderPlayers(m.players); initScene();
-    plateNameA=me; plateNameB=null; refreshNameplates(); // lobby: your name over your knight, right plate hidden
+    lastPlayers=m.players||[]; arenaSync([]); renderTicker([]);
+    plateNameA=null; plateNameB=null; refreshNameplates(); // lobby identity now lives on your ring knight
     const mine=(m.outfits||[]).find(o=>o.id===m.outfit); if(mine) setTimeout(()=>setKnightColors(knightA,mine.colors),350);
     openSetup(); // first thing after login: set up your fight
     return;
@@ -410,12 +438,15 @@ function handle(m){
   if(m.type==='state'){ applyState(m); return; }
   if(m.type==='adGoldOk'){ toast('🎁 +'+m.amount+' gp — free gold claimed!'); return; }
   if(m.type==='campaign'){ if(m.campaign) myCampaign=m.campaign; if(typeof m.trophies==='number') myTrophies=m.trophies; renderCampaign(); renderTrophies(); return; }
-  if(m.type==='players'){ renderPlayers(m.players); return; }
+  if(m.type==='players'){ lastPlayers=m.players||[]; renderPlayers(m.players); arenaSync(m.duels||[]); renderTicker(m.duels||[]); return; }
   if(m.type==='error'){ toast(m.message); return; }
-  if(m.type==='refillOk'){ toast('🆓 +50 gp refill! Gold: '+m.gold); return; }
-  if(m.type==='challengeSent'){ toast('Challenge sent to '+m.to+' for '+m.stake+' gp…'); return; }
+  if(m.type==='refillOk'){ toast('🏠 The house stakes you 50 gp — win it back! Gold: '+m.gold); return; }
+  if(m.type==='challengeSent'){ if(m.queued) myQueues.delete(m.to); toast(m.queued?('⏳ Your queued challenge reached '+m.to+' — offered now!'):('Challenge sent to '+m.to+' for '+m.stake+' gp…')); if(lastPlayers.length) renderPlayers(lastPlayers); return; }
+  if(m.type==='challengeQueued'){ myQueues.set(m.target,m.stake); toast('⏳ '+m.target+' is in a fight vs '+m.vs+' — your '+m.stake+' gp challenge will be offered the moment it ends.',4200); renderQueueBox(); if(lastPlayers.length) renderPlayers(lastPlayers); return; }
+  if(m.type==='challengeQueueCancelled'){ myQueues.delete(m.target); toast('Queued challenge to '+m.target+' cancelled.'); renderQueueBox(); if(lastPlayers.length) renderPlayers(lastPlayers); return; }
+  if(m.type==='adWatchStarted'){ if(m.endsAt) adEndsAt=m.endsAt; return; }
   if(m.type==='challengeIncoming'){
-    $('challengeText').innerHTML='⚔️ <b>'+esc(m.from)+'</b> challenges you for <b class="gold">'+m.stake+' gp</b>!<br>Winner takes the '+(m.stake*2)+' gp pot.';
+    $('challengeText').innerHTML='⚔️ <b>'+esc(m.from)+'</b> challenges you for <b class="gold">'+m.stake+' gp</b>!<br>Winner takes the '+(m.stake*2)+' gp pot.'+(m.queued?'<br><small>⏳ This challenge was queued while you were fighting.</small>':'');
     $('challengePop').style.display='block';
     $('btnAccept').onclick=()=>{ ensureAudio(); $('challengePop').style.display='none'; switchTab('fight'); send({type:'accept',from:m.from}); };
     $('btnDecline').onclick=()=>{ $('challengePop').style.display='none'; send({type:'decline',from:m.from}); };
@@ -424,29 +455,17 @@ function handle(m){
   }
   if(m.type==='chat'){ const c=$('chat'); c.innerHTML+='<div><b>'+esc(m.from)+':</b> '+esc(m.text)+'</div>'; c.scrollTop=c.scrollHeight; return; }
   if(m.type==='duelStart'){
-    duel={id:m.duelId,a:m.a,b:m.b,pot:m.pot,mine:(me===m.a||me===m.b),campaign:!!m.campaign,round:m.round||0,prize:m.prize||0}; lockedMove=null; prevHp={a:m.hpA,b:m.hpB};
-    lastDuelCampaign=!!m.campaign; histA=[]; histB=[]; clearHitLabels();
-    const cl=$('duelCampaignLine');
-    if(m.campaign){ cl.textContent='🏆 Campaign Round '+m.round+' — '+(me===m.a?m.b:m.a)+' · Prize '+m.prize+' gp'; cl.classList.remove('hidden'); } else cl.classList.add('hidden');
-    switchTab('fight');
-    $('panel-fight').classList.add('dueling');
-    $('lobbyContent').classList.add('hidden'); $('duelPanel').classList.remove('hidden');
-    $('hpOverlay').classList.remove('hidden');
-    $('btnForfeit').classList.toggle('hidden',!duel.mine);
-    $('hpALabel').textContent=m.a; $('hpBLabel').textContent=m.b; $('ovNameA').textContent=m.a; $('ovNameB').textContent=m.b;
-    setHp(m.hpA,m.hpB,true); $('winnerBanner').style.display='none'; $('winnerBanner').classList.remove('show'); $('wordBanner').textContent='';
-    setKnightColors(knightA,m.colorsA); setKnightColors(knightB,m.colorsB);
-    plateNameA=m.a; plateNameB=m.b; refreshNameplates(); // both fighters' names over their heads (bot name included)
-    resetKnightPose();
-    const profs=[{delay:60,dur:2350,rate:8.6,tick:.30,amp:.10,bend:.30},{delay:260,dur:2420,rate:10.4,tick:.41,amp:.075,bend:-.27}];
-    if(Math.random()<.5) profs.reverse();
-    [[knightA,profs[0]],[knightB,profs[1]]].forEach(([k,p])=>{ if(!k) return; const u=k.userData; u.strideRate=p.rate; u.strideTick=p.tick; u.bobAmp=p.amp; u.pathBend=p.bend; setSpot(k,1,p.dur,p.delay); });
-    $('duelStatus').textContent=m.campaign?('🏆 Round '+m.round+' — win the '+m.prize+' gp prize! Pick your move!'):('Pot: '+m.pot+' gp — pick your move!');
-    document.querySelectorAll('#moves button').forEach(b=>{ b.classList.remove('locked'); b.disabled=!duel.mine; });
-    setCamMode('duel');
+    if(activeDuels.has(m.duelId)) return;
+    const info={id:m.duelId,a:m.a,b:m.b,pot:m.pot,stake:m.stake||0,mine:(me===m.a||me===m.b),campaign:!!m.campaign,practice:!!m.practice,round:m.round||0,prize:m.prize||0,colorsA:m.colorsA,colorsB:m.colorsB,hpA:m.hpA,hpB:m.hpB};
+    activeDuels.set(m.duelId,info);
+    if(info.mine){ if(stageDuelId&&stageDuelId!==m.duelId) demoteStage(); stageDuel(info,true); }
+    else if(!stageDuelId) stageDuel(info,true);
+    else makeMini(info);
+    arenaSync();
     return;
   }
   if(m.type==='duelCountdown'){
+    if(m.duelId!==stageDuelId) return;
     const c=$('countdown');
     if(m.n>0){ c.textContent=m.n; c.style.color='#fff'; }
     else { c.textContent='FIGHT!'; c.style.color='#69f0ae'; setTimeout(()=>{ if($('countdown').textContent==='FIGHT!') $('countdown').textContent=''; },750); }
@@ -454,8 +473,12 @@ function handle(m){
     if(m.n>0) tone(440,440,.09,'square',.12);
     return;
   }
-  if(m.type==='duelTick'){ for(let i=1;i<=3;i++){ const s=$('t'+i); s.className=i<=m.tickInExchange?'on':''; if(i===3&&m.tickInExchange===3) s.classList.add('t3'); } return; }
+  if(m.type==='duelTick'){ if(m.duelId!==stageDuelId) return; for(let i=1;i<=3;i++){ const s=$('t'+i); s.className=i<=m.tickInExchange?'on':''; if(i===3&&m.tickInExchange===3) s.classList.add('t3'); } return; }
   if(m.type==='duelExchange'){
+    const inf=activeDuels.get(m.duelId); if(inf){ inf.hpA=m.hpA; inf.hpB=m.hpB; }
+    if(m.duelId!==stageDuelId){ const mn=minis.get(m.duelId); if(mn) miniExchange(mn,m); return; }
+    if(duel){ duel.exchCount=(duel.exchCount||0)+1; const mySide=me===m.a?'a':'b'; if(m.winnerSide===mySide) duel.myWins=(duel.myWins||0)+1; }
+    labelStamp=Date.now();
     setHp(m.hpA,m.hpB);
     histA.push(m.moveA); histB.push(m.moveB); if(histA.length>6) histA.shift(); if(histB.length>6) histB.shift();
     updateHitLabels(m); crowdExcite=1;
@@ -468,19 +491,37 @@ function handle(m){
     addShake(m.glance?.2:(dmg>=6?.55:dmg>0?.32:.16)); // a glancing hit lands smaller
     if(m.word==='BLOCKED!'||m.word==='GUARDED') sndBlock(); else if(m.word==='CLASH!') sndClash(); else sndClang(dmg>=6);
     document.querySelectorAll('#moves button').forEach(b=>b.classList.remove('locked')); lockedMove=null;
-    let status=m.a+' used '+m.moveA+' · '+m.b+' used '+m.moveB+' — '+m.word;
+    let status=exchangeLine(m);
+    if(m.riposte) status+=' ⚔️ Riposte +1!';
+    if(m.turtle) status+=' 🐢 Third guard in a row — that block dealt nothing.';
+    if(m.warnBram) status+=' 👀 Bram is watching your favourite move…';
     if(m.glance){
       const gt=$('glanceTag'); gt.classList.remove('show'); void gt.offsetWidth; gt.classList.add('show');
-      status+=' · ⚡ GLANCING! '+(m.glance==='a'?m.a:m.b)+"'s hit was off — still closing in";
+      if(duel && duel.mine && !duel.glanceNote){ duel.glanceNote=true; status+=' ⚡ Glancing — off-balance from the last hit, that one landed weak.'; }
+      else status+=' ⚡ GLANCING!';
     }
+    if(duel && duel.practice && duel.mine) status=practiceCoach(m);
+    else if(duel && !duel.mine) status='📺 '+status;
     $('duelStatus').textContent=status;
     return;
   }
   if(m.type==='duelEnd'){
+    activeDuels.delete(m.duelId);
+    if(m.duelId!==stageDuelId){ const mn=minis.get(m.duelId); if(mn) miniEnd(mn,m); arenaSync(); return; }
     const iWon = m.winner===me;
+    if(duel && duel.mine){
+      const oppName=duel.a===me?duel.b:duel.a;
+      const oppHist=(duel.a===me?histB:histA);
+      const cnt={}; oppHist.forEach(x=>cnt[x]=(cnt[x]||0)+1);
+      const oppFav=Object.keys(cnt).sort((x,y)=>cnt[y]-cnt[x])[0]||null;
+      const botDef=(window._bots||[]).find(b=>b.name===oppName);
+      pendingPost={won:iWon,campaign:!!m.campaign,practice:!!m.practice,pot:m.pot||0,prize:m.prize||0,stake:duel.stake||0,trophy:!!m.trophy,dailyBonus:m.dailyBonus||0,target:oppName,myWins:duel.myWins||0,exch:duel.exchCount||0,oppFav,botName:botDef?botDef.name:null,botStake:botDef?botDef.stake:0};
+    }
     const wb=$('winnerBanner');
-    if(m.campaign){ wb.innerHTML='👑 WINNER<br>'+esc(m.winner)+(m.prize?' +'+m.prize+' GP PRIZE':'')+(m.trophy?'<br>🏆 TROPHY!':''); }
+    if(m.practice){ wb.innerHTML='🎓 PRACTICE<br>'+esc(m.winner)+' WINS'; }
+    else if(m.campaign){ wb.innerHTML='👑 WINNER<br>'+esc(m.winner)+(m.prize?' +'+m.prize+' GP PRIZE':'')+(m.trophy?'<br>🏆 TROPHY!':''); }
     else wb.innerHTML='👑 WINNER<br>'+esc(m.winner)+' +'+m.pot+' GP';
+    if(iWon && m.dailyBonus) wb.innerHTML+='<br>☀️ First win of the day +'+m.dailyBonus+' GP';
     wb.classList.add('show'); wb.style.display='block';
     // a KO'd loser falls to their knees and dies (a forfeit just ends the duel)
     if(m.reason==='ko'){ const loserK = m.winner===duel?.a ? knightB : knightA; setTimeout(()=>{ if(duel) startDeath(loserK); },450); }
@@ -488,14 +529,100 @@ function handle(m){
     if(duel && duel.mine){ if(iWon) sndVictory(); else if(m.reason==='ko') sndDeath(); }
     else sndWin();
     addShake(.25); setCamMode(m.reason==='ko' ? 'duel' : 'winner', m.winner===duel?.a); // on a KO keep both knights in frame so the loser's fall to their knees is seen
-    if(m.campaign) toast(iWon?('🏆 Round '+(m.round||'')+' cleared! +'+(m.prize||0)+' gp'+(m.trophy?' + TROPHY!':'')):('Campaign run over — '+(m.winner||'')+' took Round '+(m.round||'')+'.'),4200);
+    if(m.practice) toast(iWon?'🎓 Practice won — nicely read! Real fights vs Pip pay gold.':'🎓 Practice over — watch his pattern and counter it.',4200);
+    else if(m.campaign) toast(iWon?('🏆 Round '+(m.round||'')+' cleared! +'+(m.prize||0)+' gp'+(m.trophy?' + TROPHY!':'')):('Campaign run over — '+(m.winner||'')+' took Round '+(m.round||'')+'.'),4200);
     else toast(iWon?'🏆 You won '+m.pot+' gp!':(m.winner+' took the '+m.pot+' gp pot.'),4000);
     // Fade out, reset under the black, fade back in — no sudden snap back to the lobby pose.
     setTimeout(()=>{ const v=$('fadeVeil'); if(v) v.classList.add('on'); setTimeout(()=>{ endDuelUI(); const v2=$('fadeVeil'); if(v2) v2.classList.remove('on'); },620); },2700);
     return;
   }
 }
-function endDuelUI(){ const wasCampaign=lastDuelCampaign; duel=null; lastDuelCampaign=false; resetKnightPose(); setSpot(knightA,0,1450,90); setSpot(knightB,0,1620,0); $('duelPanel').classList.add('hidden'); $('duelCampaignLine').classList.add('hidden'); $('lobbyContent').classList.remove('hidden'); $('panel-fight').classList.remove('dueling'); $('hpOverlay').classList.add('hidden'); $('btnForfeit').classList.add('hidden'); $('countdown').textContent=''; hideCrown(); setCamMode('lobby'); plateNameA=me; plateNameB=null; refreshNameplates(); clearHitLabels(); if(wasCampaign) switchTab('campaign'); }
+/* ---- Stage management: ONE duel fills the main pit — yours if you're in
+   one, else the oldest running fight (spectate). Every other running duel
+   plays in a mini-pit behind it, and everyone waiting stands in the ring.
+   (stageDuelId / activeDuels are declared with the top globals so a message
+   can never hit them before initialization.) ---- */
+function stageDuel(info,fresh){
+  stageDuelId=info.id;
+  duel={id:info.id,a:info.a,b:info.b,pot:info.pot,stake:info.stake,mine:info.mine,campaign:info.campaign,practice:info.practice,round:info.round,prize:info.prize,myWins:0,exchCount:0,glanceNote:false};
+  lockedMove=null; prevHp={a:info.hpA,b:info.hpB};
+  lastDuelCampaign=info.campaign; histA=[]; histB=[]; clearHitLabels(); labelStamp=0;
+  const pf=$('postFight'); if(pf) pf.classList.add('hidden');
+  const cl=$('duelCampaignLine');
+  if(info.campaign){ cl.textContent='🏆 Campaign Round '+info.round+' — '+(me===info.a?info.b:info.a)+' · Prize '+info.prize+' gp'; cl.classList.remove('hidden'); }
+  else if(info.practice){ cl.textContent='🎓 Practice duel — no gold on the line. Learn the moves!'; cl.classList.remove('hidden'); }
+  else cl.classList.add('hidden');
+  switchTab('fight');
+  $('panel-fight').classList.add('dueling');
+  $('lobbyContent').classList.add('hidden'); $('duelPanel').classList.remove('hidden');
+  $('hpOverlay').classList.remove('hidden');
+  $('btnForfeit').classList.toggle('hidden',!duel.mine);
+  $('hpALabel').textContent=info.a; $('hpBLabel').textContent=info.b; $('ovNameA').textContent=info.a; $('ovNameB').textContent=info.b;
+  setHp(info.hpA,info.hpB,true); $('winnerBanner').style.display='none'; $('winnerBanner').classList.remove('show'); $('wordBanner').textContent='';
+  if(knightA){ knightA.visible=true; setKnightColors(knightA,info.colorsA); }
+  if(knightB){ knightB.visible=true; setKnightColors(knightB,info.colorsB); }
+  plateNameA=info.a; plateNameB=info.b; refreshNameplates();
+  resetKnightPose();
+  if(fresh){
+    [knightA,knightB].forEach(k=>{ if(k){ k.userData.spotMix=0; k.userData.spotRyMix=0; } });
+    const profs=[{delay:60,dur:2350,rate:8.6,tick:.30,amp:.10,bend:.30},{delay:260,dur:2420,rate:10.4,tick:.41,amp:.075,bend:-.27}];
+    if(Math.random()<.5) profs.reverse();
+    [[knightA,profs[0]],[knightB,profs[1]]].forEach(([k,p])=>{ if(!k) return; const u=k.userData; u.strideRate=p.rate; u.strideTick=p.tick; u.bobAmp=p.amp; u.pathBend=p.bend; setSpot(k,1,p.dur,p.delay); });
+  } else {
+    [knightA,knightB].forEach(k=>{ if(k){ k.userData.spotMix=1; k.userData.spotRyMix=1; k.userData.spotAnim=null; } });
+  }
+  $('duelStatus').textContent = info.practice ? "🎓 Practice — watch Pip's move, then counter it! Your first picks take as long as you need."
+    : info.campaign ? ('🏆 Round '+info.round+' — win the '+info.prize+' gp prize! Pick your move!')
+    : info.mine ? ('Pot: '+info.pot+' gp — pick your move!')
+    : ('📺 Watching '+info.a+' vs '+info.b+' — '+info.pot+' gp pot');
+  document.querySelectorAll('#moves button').forEach(b=>{ b.classList.remove('locked'); b.disabled=!duel.mine; });
+  setCamMode(info.mine?'duel':'watch');
+}
+function demoteStage(){
+  const info=activeDuels.get(stageDuelId); if(!info) return;
+  info.hpA=prevHp.a; info.hpB=prevHp.b;
+  makeMini(info);
+  stageDuelId=null; duel=null;
+}
+function promoteNext(){
+  if(!me || stageDuelId || !activeDuels.size) return;
+  const info=activeDuels.values().next().value;
+  if(info) stageDuel(info,false);
+}
+function exchangeLine(m){
+  if(m.word==='GUARDED') return m.a+' and '+m.b+' both guarded — nothing lands.';
+  if(m.word==='CLASH!') return 'Blades clash! Both fighters take '+m.aDmg+'.';
+  const wName=m.winnerSide==='a'?m.a:m.b, lName=m.winnerSide==='a'?m.b:m.a;
+  const wDmg=m.winnerSide==='a'?m.bDmg:m.aDmg;
+  const verb={'SLASH!':'slashes','SMASH!':'smashes through the guard of','BLOCKED!':'blocks and nicks'}[m.word]||'hits';
+  return wName+' '+verb+' '+lName+' — '+wDmg+' damage.';
+}
+function practiceCoach(m){
+  const c=COUNTER[m.moveB];
+  return '🎓 Pip used '+(MOVE_META[m.moveB].icon)+' '+MOVE_META[m.moveB].label+' — '+(MOVE_META[c].icon)+' '+MOVE_META[c].label+' beats it. Try that!';
+}
+function showPostFight(pf){
+  const el=$('postFight'); if(!el) return;
+  let title; const lines=[];
+  if(pf.practice){ title=pf.won?'🎓 Practice won!':'🎓 Practice over'; lines.push('No gold on the line — that was the lesson. Real fights vs Pip pay 5 gp a win.'); }
+  else if(pf.campaign){ title=pf.won?('🏆 Round cleared! +'+pf.prize+' gp'):('🏆 Run over — '+pf.target+' took it'); if(pf.trophy) lines.push('🏆 TROPHY won!'); }
+  else if(pf.won){ title='🏆 You won! +'+pf.pot+' gp'; }
+  else { title='💀 You lost — '+pf.stake+' gp'; }
+  if(pf.dailyBonus) lines.push('☀️ First win of the day: +'+pf.dailyBonus+' gp bonus!');
+  if(pf.exch) lines.push('You won '+pf.myWins+' of '+pf.exch+' exchanges.');
+  if(!pf.won && pf.oppFav){ const c=COUNTER[pf.oppFav]; lines.push('They leaned on '+(MOVE_META[pf.oppFav].icon)+' '+MOVE_META[pf.oppFav].label+' — '+(MOVE_META[c].icon)+' '+MOVE_META[c].label+' beats it.'); }
+  $('postFightTitle').textContent=title;
+  $('postFightLines').innerHTML=lines.map(esc).join('<br>');
+  el.classList.remove('hidden');
+  $('btnRematch').onclick=()=>{ ensureAudio(); el.classList.add('hidden'); rematch(pf); };
+  $('btnPickOpp').onclick=()=>{ el.classList.add('hidden'); switchTab(pf.campaign?'campaign':'bots'); };
+}
+function rematch(pf){
+  if(pf.campaign){ send({type:'campaignFight'}); return; }
+  if(pf.botName){ challengeBot(pf.botName,pf.botStake); return; }
+  $('stakeSel').value=String(pf.stake||10); challenge(pf.target);
+}
+function endDuelUI(){ const wasCampaign=lastDuelCampaign; duel=null; stageDuelId=null; lastDuelCampaign=false; resetKnightPose(); if(knightA) knightA.visible=false; if(knightB) knightB.visible=false; $('duelPanel').classList.add('hidden'); $('duelCampaignLine').classList.add('hidden'); $('lobbyContent').classList.remove('hidden'); $('panel-fight').classList.remove('dueling'); $('hpOverlay').classList.add('hidden'); $('btnForfeit').classList.add('hidden'); $('countdown').textContent=''; hideCrown(); setCamMode('lobby'); plateNameA=null; plateNameB=null; refreshNameplates(); clearHitLabels(); arenaSync(); promoteNext(); if(pendingPost){ showPostFight(pendingPost); pendingPost=null; } if(wasCampaign) switchTab('campaign'); }
 function renderTrophies(){ $('meTrophyN').textContent=myTrophies; $('meTrophies').classList.toggle('hidden',!(myTrophies>0)); }
 function coinPileSVG(g){ // a gold pile you can SEE grow with the amount
   const coin=(x,y,s)=>'<ellipse cx="'+x+'" cy="'+y+'" rx="'+(6*s)+'" ry="'+(2.6*s)+'" fill="#f7dd7a" stroke="#c9a227" stroke-width="1"/>';
@@ -528,18 +655,22 @@ function fillAdSlot(){ const box=$('adSlot'); if(!box) return; box.innerHTML='';
 function openAdOverlay(mode,seconds,doneLabel,onDone,title,status0){
   adOverlayOpen=true; $('adOverlay').classList.remove('hidden');
   $('adTitle').textContent=title; fillAdSlot();
-  const btn=$('adAction'), st=$('adStatus'); let left=seconds;
-  btn.disabled=true; btn.textContent='Please wait…'; st.textContent=status0+' '+left+'s';
+  const btn=$('adAction'), st=$('adStatus');
+  const endsLocal=Date.now()+seconds*1000;
+  btn.disabled=true; btn.textContent='Please wait…'; st.textContent=status0+' '+seconds+'s';
   clearInterval(adTimerInt);
-  adTimerInt=setInterval(()=>{ left--; if(left>0){ st.textContent=status0+' '+left+'s'; return; } clearInterval(adTimerInt); st.textContent=mode==='gold'?'The ad is done — claim your gold!':'Break over — back to the arena!'; btn.disabled=false; btn.textContent=doneLabel; },1000);
+  adTimerInt=setInterval(()=>{ const left=(mode==='gold'&&adEndsAt)?Math.max(0,Math.ceil((adEndsAt-Date.now())/1000)):Math.max(0,Math.ceil((endsLocal-Date.now())/1000)); if(left>0){ st.textContent=status0+' '+left+'s'; return; } clearInterval(adTimerInt); st.textContent=mode==='gold'?'The ad is done — claim your gold!':'Break over — back to the arena!'; btn.disabled=false; btn.textContent=doneLabel; },250);
   btn.onclick=()=>{ clearInterval(adTimerInt); $('adOverlay').classList.add('hidden'); adOverlayOpen=false; onDone(); };
 }
 function openAdBreak(){ openAdOverlay('break',5,'▶ Continue fighting',()=>{ send({type:'adBreakDone'}); adBreakWanted=false; },'📺 Ad break','Quick break — your next fight unlocks in'); }
-function openAdGold(){ if(adOverlayOpen||duel) return; if(adClaimsLeftNow===0){ toast('No free-gold claims left today — back tomorrow!'); return; } send({type:'adWatchStart'}); openAdOverlay('gold',30,'🎁 Claim 10 gp',()=>{ send({type:'claimAdGold'}); },'🎁 Free gold','Watch the ad — claim unlocks in'); }
+function openAdGold(){ if(adOverlayOpen||duel) return; if(adClaimsLeftNow===0){ toast('No free-gold claims left today — back tomorrow!'); return; } adEndsAt=null; send({type:'adWatchStart'}); openAdOverlay('gold',30,'🎁 Claim 10 gp',()=>{ send({type:'claimAdGold'}); },'🎁 Free gold','Watch the ad — claim unlocks in'); }
 setInterval(()=>{ if(adBreakWanted&&!duel&&!adOverlayOpen&&$('setupScreen').classList.contains('hidden')&&!$('gameScreen').classList.contains('hidden')) openAdBreak(); },800);
+setInterval(()=>{ if(duel && labelStamp && Date.now()-labelStamp>2600){ labelStamp=0; clearHitLabels(); } },700); // stale hit labels fade between exchanges
 function applyState(m){
   if(m.adClaimsLeft!=null){ adClaimsLeftNow=m.adClaimsLeft; adGoldLabels(); }
   if(m.adBreakPending) adBreakWanted=true;
+  if(typeof m.campaignBest==='number') myCampaignBest=m.campaignBest;
+  if(m.queuedOut){ myQueues=new Map(m.queuedOut.map(q=>[q.target,q.stake])); renderQueueBox(); }
   const prevOutfit=window._outfit, prevOwned=window._owned;
   animateGold(m.gold);
   $('meRecord').textContent=m.wins+'W – '+m.losses+'L';
@@ -566,7 +697,7 @@ function renderCampaign(){
   $('btnCampFight').classList.toggle('hidden',!c.active);
   $('btnCampAbandon').classList.toggle('hidden',!c.active);
   if(c.active){ const r=myCampaignRounds[c.round-1]; $('btnCampFight').textContent='⚔️ R'+c.round+(r?' · '+r.name:''); $('campStatus').innerHTML='Run in progress — <b>Round '+c.round+' of 4</b>'+(won.length?(' · won so far: '+won.map(n=>myCampaignRounds[n-1].prize+' gp').join(' + ')):'')+(myTrophies?(' · 🏆×'+myTrophies):''); }
-  else $('campStatus').innerHTML=myTrophies?('🏆 Trophies won: <b class="gold">'+myTrophies+'</b> — enter again to defend the belt!'):'No run in progress.';
+  else $('campStatus').innerHTML=(myTrophies?('🏆 Trophies won: <b class="gold">'+myTrophies+'</b> — enter again to defend the belt!'):'No run in progress.')+(myCampaignBest?(' · Best run: <b>Round '+myCampaignBest+'</b>'):'');
 }
 $('btnCampStart').onclick=()=>{ ensureAudio(); send({type:'campaignStart'}); };
 $('btnCampFight').onclick=()=>{ ensureAudio(); send({type:'campaignFight'}); };
@@ -584,18 +715,32 @@ function esc(s){ const d=document.createElement('div'); d.textContent=String(s);
 
 function renderPlayers(players){
   if(!players) return;
+  lastPlayers=players;
   const humans=players.filter(p=>!p.isBot), bots=players.filter(p=>p.isBot&&!p.campaignOnly);
-  // Online tab: header count (real humans only, includes you) + tab badge
-  const oc=$('onlineCount'); if(oc) oc.textContent=humans.length;
-  const badge=$('onlineBadge'); if(badge){ badge.textContent=humans.length; badge.classList.toggle('hidden',humans.length<1); }
+  // Online tab: count OTHER players (the badge means "someone to fight")
+  const others=humans.filter(p=>p.username!==me).length;
+  const oc=$('onlineCount'); if(oc) oc.textContent=others;
+  const badge=$('onlineBadge'); if(badge){ badge.textContent=others; badge.classList.toggle('hidden',others<1); }
   const rows=humans.map(p=>{
     const mine=p.username===me;
-    return '<div class="player"><span><span class="swatch" style="background:'+(p.colors?p.colors.armor:'#888')+'"></span><b>'+esc(p.username)+'</b>'+(mine?' (you)':'')+' · 🪙 '+(p.gold??'—')+' · '+p.wins+'W-'+p.losses+'L'+(p.inDuel?' · ⚔️':'')+'</span>'+(mine||p.inDuel?'':'<button title="Challenge" onclick="challenge(\''+esc(p.username)+'\')">⚔️</button>')+'</div>';
+    const status=p.inDuel?(p.campRound?(' · 🏆 Tournament R'+p.campRound+' vs '+esc(p.vs||'')):(' · ⚔️ fighting '+esc(p.vs||''))):' · 🟢 free';
+    let btn='';
+    if(!mine){
+      if(p.inDuel) btn=myQueues.has(p.username)?'<button onclick="cancelQueue(\''+esc(p.username)+'\')">⏳ Queued · Cancel</button>':'<button title="Queue a challenge — it is offered the moment their fight ends" onclick="challenge(\''+esc(p.username)+'\')">⏳ Queue ⚔️</button>';
+      else btn='<button title="Challenge" onclick="challenge(\''+esc(p.username)+'\')">⚔️</button>';
+    }
+    return '<div class="player"><span><span class="swatch" style="background:'+(p.colors?p.colors.armor:'#888')+'"></span><b>'+esc(p.username)+'</b>'+(mine?' (you)':'')+' · 🪙 '+(p.gold??'—')+' · '+p.wins+'W-'+p.losses+'L'+(p.trophies?' · 🏆'+p.trophies:'')+status+'</span>'+btn+'</div>';
   }).join('');
-  const alone=humans.length<=1 && (!humans.length || humans[0].username===me);
-  $('playerList').innerHTML=rows+(alone?'<p style="margin:6px 0">Just you right now — share the link, or warm up on a bot.</p>':'');
-  $('botList').innerHTML=bots.map(p=>'<div class="player"><span><span class="swatch" style="background:'+p.colors.armor+'"></span><b>'+esc(p.username)+'</b> 🤖 · '+esc(p.title||'')+' · 🪙 '+p.stake+(p.inDuel?' · ⚔️':'')+'<br><small>'+esc(p.taunt||'')+'</small></span>'+(p.inDuel?'':'<button onclick="challengeBot(\''+esc(p.username)+'\','+p.stake+')">⚔️ 🪙'+p.stake+'</button>')+'</div>').join('');
+  $('playerList').innerHTML=rows+(others===0?'<p style="margin:6px 0">Just you right now — share the link, or warm up on a bot.</p>':'');
+  $('botList').innerHTML=bots.map(p=>'<div class="player"><span><span class="swatch" style="background:'+p.colors.armor+'"></span><b>'+esc(p.username)+'</b> 🤖 · '+esc(p.title||'')+' · 🪙 '+p.stake+(p.inDuel?(' · ⚔️ fighting '+esc(p.vs||'')+' — back soon'):'')+'<br><small>'+esc(p.taunt||'')+'</small></span>'+(p.inDuel?'':'<button onclick="challengeBot(\''+esc(p.username)+'\','+p.stake+')">⚔️ 🪙'+p.stake+'</button>')+'</div>').join('');
+  renderQueueBox();
 }
+function renderQueueBox(){
+  const box=$('queueBox'); if(!box) return;
+  if(!myQueues.size){ box.innerHTML=''; return; }
+  box.innerHTML=[...myQueues].map(([t,s])=>'<div class="qrow"><span>⏳ Your <b class="gold">'+s+' gp</b> challenge to <b>'+esc(t)+'</b> is queued — it lands the moment their fight ends.</span><button onclick="cancelQueue(\''+esc(t)+'\')">Cancel</button></div>').join('');
+}
+window.cancelQueue=name=>send({type:'challengeCancel',target:name});
 window.challenge=name=>send({type:'challenge',target:name,stake:Number($('stakeSel').value)});
 window.challengeBot=(name,stake)=>send({type:'challenge',target:name,stake});
 
@@ -621,8 +766,9 @@ function renderShop(){
   if(!myOutfits.length) return;
   $('shop').innerHTML=myOutfits.map(o=>{
     const owned=(window._owned||[]).includes(o.id), eq=window._outfit===o.id;
-    const net=window._net||0, need=o.net||0, netLine=need?('<br><small>'+(owned||net>=need?('🏆 Net +'+need+' ✓'):('🔒 Needs net +'+need))+'</small>'):'';
-    return '<div class="item'+(eq?' eq':'')+'"><div class="prev">'+knightSVG(o)+'</div><b>'+esc(o.name)+'</b>'+netLine+'<br>'+(eq?'✅ Equipped':owned?'<button onclick="equip(\''+o.id+'\')">Wear</button>':'<button onclick="buy(\''+o.id+'\')">🪙 '+o.price+'</button>')+'</div>';
+    const net=window._net||0, need=o.net||0, netLine=need?('<br><small>'+(owned||net>=need?('🏆 Net +'+need+' ✓'):('🔒 Needs net +'+need+' · you’re at '+(net>=0?'+':'')+net))+'</small>'):'';
+    const goldLine=(!owned&&(displayedGold||0)<o.price)?('<br><small>🪙 Need '+(o.price-(displayedGold||0))+' more gp</small>'):'';
+    return '<div class="item'+(eq?' eq':'')+'"><div class="prev">'+knightSVG(o)+'</div><b>'+esc(o.name)+'</b>'+netLine+goldLine+'<br>'+(eq?'✅ Equipped':owned?'<button onclick="equip(\''+o.id+'\')">Wear</button>':'<button onclick="buy(\''+o.id+'\')">🪙 '+o.price+'</button>')+'</div>';
   }).join('');
 }
 // ---------- Set up your fight (first screen after login) ----------
@@ -639,7 +785,7 @@ window.setupWear=id=>{ send({type:'equip',outfitId:id}); };
 function openSetup(){ renderSetup(); $('setupScreen').classList.remove('hidden'); }
 function closeSetup(tab){ $('setupScreen').classList.add('hidden'); if(tab) switchTab(tab); }
 $('btnSetup').onclick=()=>{ ensureAudio(); openSetup(); };
-$('setupSkip').onclick=()=>closeSetup();
+$('setupSkip').onclick=()=>closeSetup('fight');
 $('sqBots').onclick=()=>closeSetup('bots');
 $('sqPlayers').onclick=()=>closeSetup('online');
 $('sqTourney').onclick=()=>closeSetup('campaign');
@@ -1068,6 +1214,7 @@ function initScene(){
   { const n=70, pos=new Float32Array(n*3); const geo=new THREE.BufferGeometry(); geo.setAttribute('position',new THREE.BufferAttribute(pos,3)); sparks={pts:new THREE.Points(geo,new THREE.PointsMaterial({color:0xffcf5e,size:.13,transparent:true,opacity:0,blending:THREE.AdditiveBlending,depthWrite:false})),vel:[],life:0}; sparks.pts.frustumCulled=false; scene.add(sparks.pts); }
   knightA=makeKnight({armor:'#9a8a72',trim:'#6b5d49',plume:'#b0a58e',shield:'#8a7a5f'}); knightA.userData.baseX=-HOME_X; knightA.userData.facing=1; knightA.userData.lobbyX=-2.7; knightA.userData.lobbyRy=.35; knightA.userData.fightRy=Math.PI/2; knightA.position.set(knightA.userData.lobbyX,0,knightA.userData.lobbyZ); knightA.rotation.y=knightA.userData.lobbyRy; knightA.traverse(o=>{o.castShadow=true;o.receiveShadow=true;}); scene.add(knightA);
   knightB=makeKnight({armor:'#7d8ca3',trim:'#46536b',plume:'#e8e8f0',shield:'#5b6c8c'}); knightB.userData.baseX=HOME_X; knightB.userData.facing=-1; knightB.userData.lobbyX=2.7; knightB.userData.lobbyRy=-.35; knightB.userData.fightRy=-Math.PI/2; knightB.position.set(knightB.userData.lobbyX,0,knightB.userData.lobbyZ); knightB.rotation.y=knightB.userData.lobbyRy; knightB.traverse(o=>{o.castShadow=true;o.receiveShadow=true;}); scene.add(knightB);
+  knightA.visible=false; knightB.visible=false; // stage pair: hidden until a duel takes the pit — the lobby is the ring now
   // blade-trail ribbons + soft contact blob shadows (backup under the real shadow)
   const blobT=blobTex();
   [knightA,knightB].forEach(k=>{
@@ -1090,7 +1237,7 @@ function initScene(){
   refreshNameplates();
   const clock=new THREE.Clock();
   (function loop(){ requestAnimationFrame(loop); const dt=Math.min(clock.getDelta(),.05), t=clock.elapsedTime;
-    [knightA,knightB].forEach((k,idx)=>{ if(!k) return; const u=k.userData, an=u.anim;
+    allKnights().forEach((k,idx)=>{ if(!k) return; const u=k.userData, an=u.anim;
       // --- death state: once started, the knight stops fighting and crumples ---
       let deathE=0, deathSlump=0;
       if(an.death>=0){ an.swing=null; an.knock=-1; if(an.death<1) an.death=Math.min(1,an.death+dt/.85); const dp=an.death; deathE=1-Math.pow(1-dp,3); if(dp>=1){ an.deathT=Math.min(1,(an.deathT||0)+dt/.8); deathSlump=an.deathT*an.deathT; } }
@@ -1148,7 +1295,8 @@ function initScene(){
     let desPos, desLook;
     if(camMode==='winner'){ const wk=camWinnerA?knightA:knightB; const wx=wk?wk.position.x:(camWinnerA?-HOME_X:HOME_X); desPos=new THREE.Vector3(wx*.5,3.1,5.8); desLook=new THREE.Vector3(wx,1.35,0); }
     else if(camMode==='duel'){ desPos=new THREE.Vector3(0,4.5,9.4); desLook=new THREE.Vector3(0,1.2,0); }
-    else { desPos=new THREE.Vector3(0,4.6,9.6); desLook=new THREE.Vector3(0,1.25,0); }
+    else if(camMode==='watch'){ desPos=new THREE.Vector3(0,5.2,11.6); desLook=new THREE.Vector3(0,1.1,-0.9); }
+    else { desPos=new THREE.Vector3(0,5.0,11.4); desLook=new THREE.Vector3(0,1.15,-0.6); }
     if(camZoom!==1){ desPos.sub(desLook).multiplyScalar(camZoom).add(desLook); }
     cam.position.lerp(desPos,.045);
     if(shakeAmt>0){ cam.position.x+=(Math.random()-.5)*shakeAmt*.5; cam.position.y+=(Math.random()-.5)*shakeAmt*.35; shakeAmt*=Math.pow(.02,dt); if(shakeAmt<.01) shakeAmt=0; }
@@ -1162,10 +1310,10 @@ function syncDispAndWalk(m,impactDelay){
   // displacement (they END the exchange displaced), then — still inside this
   // 1-second cycle — walk forward back into reach before the next swing.
   setTimeout(()=>{
-    if(!duel) return;
+    if(!duel||duel.id!==m.duelId) return;
     if(typeof m.dispA==='number') setDisp(knightA,m.dispA,'kb');
     if(typeof m.dispB==='number') setDisp(knightB,m.dispB,'kb');
-    setTimeout(()=>{ if(duel) scheduleWalkForward(); },260);
+    setTimeout(()=>{ if(duel&&duel.id===m.duelId) scheduleWalkForward(); },260);
   },Math.round(impactDelay));
 }
 function animateExchange(m){
@@ -1187,7 +1335,7 @@ function animateExchange(m){
   const swingDelay = glanceWin ? 170 : 0;
   const startWin=()=>{ if(winMove==='defence') startSwing(winK,'defence'); else startSwing(winK,winMove); };
   // BOTH knights act: winner with the winning move, loser with the move they locked
-  if(swingDelay) setTimeout(()=>{ if(duel) startWin(); },swingDelay); else startWin();
+  if(swingDelay) setTimeout(()=>{ if(duel&&duel.id===m.duelId) startWin(); },swingDelay); else startWin();
   actMove(loseK,loseMove);
   const loserDmg=aWon?m.bDmg:m.aDmg;
   const impactAt=Math.round(impactMsFor(winMove))+swingDelay;
@@ -1204,6 +1352,144 @@ function animateExchange(m){
 }
 function showCrown(overA){ if(!crown) return; const k=overA?knightA:knightB; if(!k) return; crown.position.set(k.position.x,4.6,0); crown.visible=true; crownDrop=0; liftPlates(true); }
 function hideCrown(){ if(crown) crown.visible=false; crownDrop=-1; liftPlates(false); }
+
+/* ================= ARENA PRESENCE (Derek, 2026-11-26) =================
+   Every online player is their own knight. Waiting players stand in a ring
+   that wraps around the pit; every running fight is visible — yours (or the
+   oldest) in the main pit, the rest in mini-pits behind it. */
+const MINI_SPOTS=[{x:-3.6,z:-5.9,ry:.35},{x:3.6,z:-5.9,ry:-.35},{x:0,z:-6.9,ry:0}];
+function allKnights(){ const arr=[knightA,knightB]; minis.forEach(mn=>{ arr.push(mn.kA,mn.kB); }); ringKnights.forEach(rk=>arr.push(rk.g)); return arr; }
+function arenaSync(duelsList){
+  if(duelsList){ lastDuels=duelsList; reconcileDuels(); }
+  ringSync();
+}
+/* The server's players broadcast carries EVERY running duel. A player who
+   joins (or refreshes) mid-fight never got those duelStart messages — so
+   rebuild stage/mini views for any listed duel we aren't tracking, using
+   the fighters' colours from the player list. Also drops tracked duels the
+   server no longer lists (their duelEnd was missed). Only runs on a fresh
+   authoritative list, never on a bare local call. */
+function reconcileDuels(){
+  if(!sceneReady) return;
+  for(const d of (lastDuels||[])){
+    if(activeDuels.has(d.duelId)) continue;
+    const pa=lastPlayers.find(p=>p.username===d.a), pb=lastPlayers.find(p=>p.username===d.b);
+    const info={id:d.duelId,a:d.a,b:d.b,pot:(d.campaign||d.practice)?0:(d.stake||0)*2,stake:d.stake||0,mine:(me===d.a||me===d.b),campaign:!!d.campaign,practice:!!d.practice,round:d.round||0,prize:d.campaign?((myCampaignRounds[(d.round||1)-1]||{}).prize||0):0,colorsA:pa?pa.colors:null,colorsB:pb?pb.colors:null,hpA:d.hpA,hpB:d.hpB};
+    activeDuels.set(d.duelId,info);
+    if(info.mine){ if(stageDuelId) demoteStage(); stageDuel(info,false); }
+    else if(!stageDuelId) stageDuel(info,false);
+    else makeMini(info);
+  }
+  for(const [id] of [...activeDuels]){
+    if(!(lastDuels||[]).some(d=>d.duelId===id)){
+      activeDuels.delete(id);
+      if(id===stageDuelId) endDuelUI();
+      else if(minis.has(id)) removeMini(id);
+    }
+  }
+}
+function renderTicker(duelsList){
+  if(duelsList) lastDuels=duelsList;
+  const el=$('arenaTicker'); if(!el) return;
+  if(!lastPlayers.length){ el.textContent=''; return; }
+  const fighting=new Set();
+  (lastDuels||[]).forEach(d=>{ fighting.add(d.a); fighting.add(d.b); });
+  const parts=(lastDuels||[]).map(d=> d.campaign?('🏆 '+d.a+' vs '+d.b+' · Tournament R'+d.round) : d.practice?('🎓 '+d.a+' vs '+d.b+' · practice') : ('⚔️ '+d.a+' vs '+d.b+' · '+d.stake+' gp'));
+  const waiting=lastPlayers.filter(p=>!fighting.has(p.username)).length;
+  el.textContent=(parts.length?parts.join('  ·  ')+'  ·  ':'')+waiting+' waiting in the arena';
+}
+function ringSync(){
+  if(!sceneReady||!lastPlayers.length) return;
+  const fighting=new Set();
+  (lastDuels||[]).forEach(d=>{ fighting.add(d.a); fighting.add(d.b); });
+  activeDuels.forEach(inf=>{ fighting.add(inf.a); fighting.add(inf.b); });
+  const present=new Set(lastPlayers.map(p=>p.username));
+  for(const [name,rk] of [...ringKnights]){ if(!present.has(name)){ scene3.remove(rk.g); ringKnights.delete(name); } }
+  const waiting=lastPlayers.filter(p=>!fighting.has(p.username)).slice().sort((x,y)=>x.username<y.username?-1:1);
+  waiting.forEach((p,i)=>{
+    let rk=ringKnights.get(p.username);
+    if(!rk){
+      const g=makeKnight(p.colors||{armor:'#9a8a72',trim:'#6b5d49',plume:'#b0a58e',shield:'#8a7a5f'});
+      g.traverse(o=>{ o.castShadow=true; });
+      const plate=makeNameplate(); g.add(plate.sprite); plate.sprite.position.z=.7;
+      rk={g,plate}; ringKnights.set(p.username,rk); scene3.add(g);
+    }
+    if(p.colors) setKnightColors(rk.g,p.colors);
+    setPlate(rk.plate, p.username+(p.trophies?' 🏆'+p.trophies:''));
+    rk.g.visible=true;
+    const n=waiting.length;
+    const gap=1.9; // the ring wraps around, but the camera's own sector stays empty — nobody stands on the lens
+    const th=n<=1 ? Math.PI*1.5 : (Math.PI/2 + gap/2) + i*((Math.PI*2-gap)/(n-1));
+    const x=Math.cos(th)*8.6, z=Math.sin(th)*8.6, ry=Math.atan2(-x,-z);
+    const u=rk.g.userData; u.baseX=x; u.lobbyX=x; u.lobbyZ=z; u.lobbyRy=ry; u.fightRy=ry; u.spotMix=0; u.spotRyMix=0; u.spotAnim=null; u.dispPos=0; u.dispAnim=null;
+    rk.g.position.set(x,0,z); rk.g.rotation.y=ry;
+  });
+  fighting.forEach(name=>{ const rk=ringKnights.get(name); if(rk) rk.g.visible=false; });
+}
+function miniKnight(colors,side){
+  const k=makeKnight(colors); const u=k.userData;
+  u.baseX=side*HOME_X; u.lobbyX=u.baseX; u.lobbyZ=0; u.lobbyRy=0; u.fightRy=side<0?Math.PI/2:-Math.PI/2;
+  u.spotMix=1; u.spotRyMix=1; u.facing=side<0?1:-1;
+  k.position.set(u.baseX,0,0); k.rotation.y=u.fightRy;
+  k.traverse(o=>{ o.castShadow=true; });
+  return k;
+}
+function makeMini(info){
+  if(!sceneReady||minis.has(info.id)) return;
+  const used=new Set([...minis.values()].map(mn=>mn.slot));
+  const slot=MINI_SPOTS.findIndex((s,i)=>!used.has(i));
+  if(slot<0) return; // more fights than mini-pits: the ticker still names them all
+  const spot=MINI_SPOTS[slot];
+  const g=new THREE.Group(); g.position.set(spot.x,0,spot.z); g.rotation.y=spot.ry; g.scale.set(.52,.52,.52);
+  const disc=new THREE.Mesh(new THREE.CircleGeometry(2.3,24),new THREE.MeshStandardMaterial({color:0xcbb489,roughness:.95}));
+  disc.rotation.x=-Math.PI/2; disc.position.y=.01; disc.receiveShadow=true; g.add(disc);
+  const kA=miniKnight(info.colorsA,-1), kB=miniKnight(info.colorsB,1);
+  g.add(kA); g.add(kB); scene3.add(g);
+  const mn={id:info.id,slot,g,kA,kB,plateA:makeNameplate(),plateB:makeNameplate(),info};
+  kA.add(mn.plateA.sprite); kB.add(mn.plateB.sprite);
+  mn.plateA.sprite.position.z=.7; mn.plateB.sprite.position.z=.7;
+  drawMiniPlate(mn.plateA,info.a,info.hpA); drawMiniPlate(mn.plateB,info.b,info.hpB);
+  minis.set(info.id,mn);
+}
+function drawMiniPlate(plate,name,hp){
+  const g=plate.canvas.getContext('2d'); g.clearRect(0,0,512,128);
+  roundRectPath(g,56,10,400,108,30); g.fillStyle='rgba(10,8,4,.74)'; g.fill(); g.lineWidth=4; g.strokeStyle='rgba(247,221,122,.92)'; g.stroke();
+  g.textAlign='center'; g.textBaseline='middle';
+  let size=44; const setF=()=>{ g.font='800 '+size+'px system-ui,sans-serif'; }; setF();
+  while(g.measureText(name).width>380 && size>24){ size-=4; setF(); }
+  g.lineWidth=8; g.strokeStyle='#000'; g.lineJoin='round'; g.strokeText(name,256,42); g.fillStyle='#fff'; g.fillText(name,256,42);
+  const w=340, x=86, frac=Math.max(0,hp)/30;
+  g.fillStyle='#2a0808'; g.fillRect(x,74,w,20);
+  g.fillStyle=hp<=10?'#ff1744':hp<=18?'#ff9800':'#66bb6a'; g.fillRect(x,74,w*frac,20);
+  g.strokeStyle='#000'; g.lineWidth=3; g.strokeRect(x,74,w,20);
+  plate.tex.needsUpdate=true; plate.name=name+'|'+hp; plate.sprite.visible=true;
+}
+function miniExchange(mn,m){
+  mn.info.hpA=m.hpA; mn.info.hpB=m.hpB;
+  drawMiniPlate(mn.plateA,m.a,m.hpA); drawMiniPlate(mn.plateB,m.b,m.hpB);
+  if(m.winnerSide==='clash'){
+    if(m.moveA==='defence'){ startBlock(mn.kA); startBlock(mn.kB); } else { startSwing(mn.kA,'clash'); startSwing(mn.kB,'clash'); }
+  } else {
+    const aWon=m.winnerSide==='a';
+    const winK=aWon?mn.kA:mn.kB, loseK=aWon?mn.kB:mn.kA;
+    const winMove=aWon?m.moveA:m.moveB, loseMove=aWon?m.moveB:m.moveA;
+    if(winMove==='defence') startSwing(winK,'defence'); else startSwing(winK,winMove);
+    actMove(loseK,loseMove);
+    const loserDmg=aWon?m.bDmg:m.aDmg;
+    if(loserDmg>0) setTimeout(()=>{ if(minis.get(mn.id)===mn){ loseK.userData.anim.swing=null; startKnock(loseK,aWon?1:-1); } },Math.round(impactMsFor(winMove)));
+  }
+  if(typeof m.dispA==='number') mn.kA.userData.dispPos=m.dispA;
+  if(typeof m.dispB==='number') mn.kB.userData.dispPos=m.dispB;
+}
+function miniEnd(mn,m){
+  const loserK=m.winner===mn.info.a?mn.kB:mn.kA;
+  startDeath(loserK);
+  setTimeout(()=>removeMini(mn.id),1500);
+}
+function removeMini(id){
+  const mn=minis.get(id); if(!mn) return;
+  minis.delete(id); scene3.remove(mn.g);
+}
 </script>
 <script>try{document.getElementById('loginKnight').innerHTML=knightSVG({name:'Champion',colors:{armor:'#e3b93c',trim:'#9e7d1c',plume:'#f7dd7a',shield:'#c9a227'}});}catch(e){}</script>
 <script>
