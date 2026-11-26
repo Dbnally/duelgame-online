@@ -32,6 +32,12 @@ button:active{transform:scale(.96)}
 /* AdSense slots: hidden until a publisher ID is set (window.ADSENSE_PUB_ID). Never shown during a duel — login + lobby only, fight area untouched. */
 .adslot{display:none;text-align:center;overflow:hidden}
 body.ads-on .adslot{display:block}
+#adOverlay{position:fixed;inset:0;background:rgba(3,6,20,.88);z-index:80;display:flex;align-items:center;justify-content:center;padding:16px}
+#adCard{background:linear-gradient(180deg,#1b2450,#0d1330);border:2px solid #8a6d14;border-radius:14px;max-width:430px;width:100%;padding:16px;text-align:center;box-shadow:0 18px 50px #000c}
+#adCard h2{margin:2px 0 8px;color:#f7dd7a}
+#adSlotBox{min-height:250px;background:#070b22;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden}
+#adStatus{color:#cdd6ff;font-size:13.5px;margin:10px 0 6px;min-height:18px}
+#btnAdGold{border-color:#8a6d14}
 /* ---------- Login lighting & detail: spotlight, torch glow, embers ---------- */
 #loginScreen{position:relative;overflow:hidden}
 #loginScreen>*{position:relative;z-index:2}
@@ -219,6 +225,8 @@ select{background:#0d0a05;color:var(--ink);padding:7px;border-radius:8px;border:
           <p style="margin:4px 0 8px;font-size:13.5px;line-height:1.5">Challenge a 🌐 player, or practice vs a 🤖 bot.</p>
           <div class="row"><button onclick="switchTab('online')">🌐 Players</button><button onclick="switchTab('bots')">🤖 Bots</button></div>
           <div class="adslot" id="adLobby"><div class="adlabel">Advertisement</div><ins class="adsbygoogle" style="display:block" data-ad-format="auto" data-full-width-responsive="true"></ins></div>
+          <button id="btnAdGold" onclick="openAdGold()">🎁 Free gold — watch an ad</button>
+          <p id="adGoldLeft" style="margin:4px 0 0;font-size:12.5px;color:var(--mut)"></p>
         </div>
         <div id="duelPanel" class="hidden">
           <p id="duelCampaignLine" class="hidden"></p>
@@ -257,6 +265,8 @@ select{background:#0d0a05;color:var(--ink);padding:7px;border-radius:8px;border:
         <h3 class="sec">👕 Shop</h3>
         <p style="margin:2px 0 6px;font-size:12.5px;line-height:1.45">Cool armour needs a <b>net score</b> (wins − losses). Drop below its number and you <b>lose the armour</b> — win it back and rebuy. Your net: <b class="gold" id="shopNetV">+0</b></p>
         <div class="shop" id="shop"></div>
+        <button id="btnAdGold2" onclick="openAdGold()" style="margin-top:10px;border-color:#8a6d14">🎁 Free gold — watch an ad</button>
+        <p id="adGoldLeft2" style="margin:4px 0 0;font-size:12.5px;color:var(--mut)"></p>
       </section>
       <section id="panel-chat" class="tabPanel">
         <div id="chat"></div>
@@ -275,6 +285,14 @@ select{background:#0d0a05;color:var(--ink);padding:7px;border-radius:8px;border:
 </div>
 
 <!-- SET UP YOUR FIGHT (shown first after login) -->
+<div id="adOverlay" class="hidden">
+  <div id="adCard">
+    <h2 id="adTitle">📺 Ad break</h2>
+    <div id="adSlotBox"><div class="adlabel">Advertisement</div><div id="adSlot"></div></div>
+    <p id="adStatus"></p>
+    <button id="adAction" disabled>Please wait…</button>
+  </div>
+</div>
 <div id="setupScreen" class="hidden">
   <h2>⚔️ Set Up Your Fight</h2>
   <div id="setupStage"></div>
@@ -367,6 +385,7 @@ function handle(m){
     return;
   }
   if(m.type==='state'){ applyState(m); return; }
+  if(m.type==='adGoldOk'){ toast('🎁 +'+m.amount+' gp — free gold claimed!'); return; }
   if(m.type==='campaign'){ if(m.campaign) myCampaign=m.campaign; if(typeof m.trophies==='number') myTrophies=m.trophies; renderCampaign(); renderTrophies(); return; }
   if(m.type==='players'){ renderPlayers(m.players); return; }
   if(m.type==='error'){ toast(m.message); return; }
@@ -476,7 +495,24 @@ function animateGold(to){ // watch your coins add up — or get taken away
   let i=0;
   goldAnimTimer=setInterval(()=>{ i++; paintGold(Math.round(from+diff*i/steps)); if(i>=steps){ clearInterval(goldAnimTimer); paintGold(to); $('meGold').style.color=''; } },45);
 }
+let adBreakWanted=false, adClaimsLeftNow=null, adOverlayOpen=false, adTimerInt=null;
+function adGoldLabels(){ const t=adClaimsLeftNow==null?'':('🎁 Free gold — watch an ad (+10 gp)'); const b1=$('btnAdGold'),b2=$('btnAdGold2'); if(b1) b1.textContent=t||b1.textContent; if(b2) b2.textContent=t||b2.textContent; const s=adClaimsLeftNow==null?'':(adClaimsLeftNow>0? adClaimsLeftNow+' free-gold claim'+(adClaimsLeftNow===1?'':'s')+' left today' : 'No free-gold claims left today — back tomorrow!'); const l1=$('adGoldLeft'),l2=$('adGoldLeft2'); if(l1) l1.textContent=s; if(l2) l2.textContent=s; const dis=adClaimsLeftNow===0; if(b1) b1.disabled=dis; if(b2) b2.disabled=dis; }
+function fillAdSlot(){ const box=$('adSlot'); if(!box) return; box.innerHTML=''; const ins=document.createElement('ins'); ins.className='adsbygoogle'; ins.style.display='block'; ins.setAttribute('data-ad-format','auto'); ins.setAttribute('data-full-width-responsive','true'); const id=String(window.ADSENSE_PUB_ID||'').trim(); if(id) ins.setAttribute('data-ad-client',id); box.appendChild(ins); try{ (window.adsbygoogle=window.adsbygoogle||[]).push({}); }catch(e){} }
+function openAdOverlay(mode,seconds,doneLabel,onDone,title,status0){
+  adOverlayOpen=true; $('adOverlay').classList.remove('hidden');
+  $('adTitle').textContent=title; fillAdSlot();
+  const btn=$('adAction'), st=$('adStatus'); let left=seconds;
+  btn.disabled=true; btn.textContent='Please wait…'; st.textContent=status0+' '+left+'s';
+  clearInterval(adTimerInt);
+  adTimerInt=setInterval(()=>{ left--; if(left>0){ st.textContent=status0+' '+left+'s'; return; } clearInterval(adTimerInt); st.textContent=mode==='gold'?'The ad is done — claim your gold!':'Break over — back to the arena!'; btn.disabled=false; btn.textContent=doneLabel; },1000);
+  btn.onclick=()=>{ clearInterval(adTimerInt); $('adOverlay').classList.add('hidden'); adOverlayOpen=false; onDone(); };
+}
+function openAdBreak(){ openAdOverlay('break',5,'▶ Continue fighting',()=>{ send({type:'adBreakDone'}); adBreakWanted=false; },'📺 Ad break','Quick break — your next fight unlocks in'); }
+function openAdGold(){ if(adOverlayOpen||duel) return; if(adClaimsLeftNow===0){ toast('No free-gold claims left today — back tomorrow!'); return; } send({type:'adWatchStart'}); openAdOverlay('gold',30,'🎁 Claim 10 gp',()=>{ send({type:'claimAdGold'}); },'🎁 Free gold','Watch the ad — claim unlocks in'); }
+setInterval(()=>{ if(adBreakWanted&&!duel&&!adOverlayOpen&&$('setupScreen').classList.contains('hidden')&&!$('gameScreen').classList.contains('hidden')) openAdBreak(); },800);
 function applyState(m){
+  if(m.adClaimsLeft!=null){ adClaimsLeftNow=m.adClaimsLeft; adGoldLabels(); }
+  if(m.adBreakPending) adBreakWanted=true;
   const prevOutfit=window._outfit, prevOwned=window._owned;
   animateGold(m.gold);
   $('meRecord').textContent=m.wins+'W – '+m.losses+'L';
