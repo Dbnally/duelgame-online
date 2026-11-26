@@ -106,6 +106,8 @@ select{background:#0d1330;border-color:#8a6d1473}
 #scene canvas{width:100%!important;height:100%!important;display:block}
 .overlay{position:absolute;pointer-events:none;text-shadow:0 2px 8px #000;z-index:3}
 #flash{position:absolute;inset:0;pointer-events:none;z-index:4;opacity:0;background:radial-gradient(ellipse at center,transparent 42%,rgba(229,57,53,.55) 100%)}
+#fadeVeil{position:absolute;inset:0;background:#000;opacity:0;pointer-events:none;z-index:6;transition:opacity .55s ease}
+#fadeVeil.on{opacity:1}
 #flash.go{animation:flashA .38s ease-out}
 @keyframes flashA{0%{opacity:0}18%{opacity:1}100%{opacity:0}}
 #winnerBanner{top:10px;left:0;right:0;text-align:center;font-size:25px;font-weight:900;color:var(--gold);display:none;line-height:1.15}
@@ -235,6 +237,7 @@ select{background:#0d0a05;color:var(--ink);padding:7px;border-radius:8px;border:
     <div id="glanceTag" class="overlay"><span>⚡ GLANCING!</span></div>
     <div id="countdown" class="overlay"></div>
     <div id="flash"></div>
+    <div id="fadeVeil"></div>
   </div>
 
   <div id="bottom">
@@ -435,7 +438,7 @@ function handle(m){
     setKnightColors(knightA,m.colorsA); setKnightColors(knightB,m.colorsB);
     plateNameA=m.a; plateNameB=m.b; refreshNameplates(); // both fighters' names over their heads (bot name included)
     resetKnightPose();
-    const profs=[{delay:30,dur:1750,rate:10.2,tick:.30,amp:.08,bend:.30},{delay:190,dur:1790,rate:12.3,tick:.41,amp:.058,bend:-.27}];
+    const profs=[{delay:60,dur:2350,rate:8.6,tick:.30,amp:.10,bend:.30},{delay:260,dur:2420,rate:10.4,tick:.41,amp:.075,bend:-.27}];
     if(Math.random()<.5) profs.reverse();
     [[knightA,profs[0]],[knightB,profs[1]]].forEach(([k,p])=>{ if(!k) return; const u=k.userData; u.strideRate=p.rate; u.strideTick=p.tick; u.bobAmp=p.amp; u.pathBend=p.bend; setSpot(k,1,p.dur,p.delay); });
     $('duelStatus').textContent=m.campaign?('🏆 Round '+m.round+' — win the '+m.prize+' gp prize! Pick your move!'):('Pot: '+m.pot+' gp — pick your move!');
@@ -487,7 +490,8 @@ function handle(m){
     addShake(.25); setCamMode(m.reason==='ko' ? 'duel' : 'winner', m.winner===duel?.a); // on a KO keep both knights in frame so the loser's fall to their knees is seen
     if(m.campaign) toast(iWon?('🏆 Round '+(m.round||'')+' cleared! +'+(m.prize||0)+' gp'+(m.trophy?' + TROPHY!':'')):('Campaign run over — '+(m.winner||'')+' took Round '+(m.round||'')+'.'),4200);
     else toast(iWon?'🏆 You won '+m.pot+' gp!':(m.winner+' took the '+m.pot+' gp pot.'),4000);
-    setTimeout(endDuelUI,3500);
+    // Fade out, reset under the black, fade back in — no sudden snap back to the lobby pose.
+    setTimeout(()=>{ const v=$('fadeVeil'); if(v) v.classList.add('on'); setTimeout(()=>{ endDuelUI(); const v2=$('fadeVeil'); if(v2) v2.classList.remove('on'); },620); },2700);
     return;
   }
 }
@@ -769,6 +773,21 @@ const metalTex=()=>canvasTex((g,w,h)=>{ g.fillStyle='#f5f5f5'; g.fillRect(0,0,w,
   for(let i=0;i<70;i++){ g.strokeStyle='#00000010'; g.beginPath(); const y=Math.random()*h; g.moveTo(0,y); g.lineTo(w,y+(Math.random()-.5)*6); g.stroke(); } for(let i=0;i<26;i++){ g.strokeStyle='#ffffff70'; g.lineWidth=1; g.beginPath(); const x=Math.random()*w,y=Math.random()*h; g.moveTo(x,y); g.lineTo(x+8+Math.random()*20,y+(Math.random()-.5)*5); g.stroke(); } },256,256,1,1);
 const bladeTex=()=>canvasTex((g,w,h)=>{ g.fillStyle='#fbfbfb'; g.fillRect(0,0,w,h); for(let x=0;x<w;x+=2){ g.fillStyle='#0000000a'; g.fillRect(x,0,1,h);} g.fillStyle='#00000026'; g.fillRect(w/2-3,0,6,h); g.fillStyle='#ffffff88'; g.fillRect(w/2-8,0,2,h); g.fillRect(w/2+6,0,2,h); },64,256,1,1);
 const blobTex=()=>canvasTex((g,w,h)=>{ const gr=g.createRadialGradient(w/2,h/2,6,w/2,h/2,w/2); gr.addColorStop(0,'#000000'); gr.addColorStop(.65,'#000000d9'); gr.addColorStop(1,'#00000000'); g.fillStyle=gr; g.fillRect(0,0,w,h); },128,128);
+/* Procedural environment reflections (night sky + torch glow) so metal armour
+   actually SHINES: a tiny cube map painted on canvases — deep blue night up
+   top, warm torch-orange at the horizon, dark earth below. Assigned as envMap
+   on the knight metals; without an env map, high-metalness surfaces go dull. */
+let _envTex=null;
+function envTex(){
+  if(_envTex) return _envTex;
+  const face=(top,mid,bot,stars)=>{ const c=document.createElement('canvas'); c.width=64; c.height=64; const g=c.getContext('2d'); const gr=g.createLinearGradient(0,0,0,64); gr.addColorStop(0,top); gr.addColorStop(.55,mid); gr.addColorStop(1,bot); g.fillStyle=gr; g.fillRect(0,0,64,64); if(stars){ g.fillStyle='#ffffff'; for(let i=0;i<26;i++){ g.globalAlpha=.35+Math.random()*.6; g.fillRect(Math.random()*64,Math.random()*26,1.4,1.4); } g.globalAlpha=1; } return c; };
+  const side=()=>face('#131f3d','#a35c2e','#241408',true);
+  const up=face('#0d1633','#16224a','#2a1c0c',true);
+  const down=face('#241408','#1a120a','#0d0906',false);
+  _envTex=new THREE.CubeTexture([side(),side(),up,down,side(),side()]);
+  _envTex.needsUpdate=true;
+  return _envTex;
+}
 const bannerTex=()=>canvasTex((g,w,h)=>{ g.fillStyle='#8c1f28'; g.fillRect(0,0,w,h); g.fillStyle='#6e141d'; g.fillRect(0,0,w,10); g.fillRect(0,h-10,w,10); g.strokeStyle='#f7dd7a'; g.lineWidth=5; g.beginPath(); g.moveTo(28,28); g.lineTo(w-28,h-28); g.moveTo(w-28,28); g.lineTo(28,h-28); g.stroke(); g.fillStyle='#f7dd7a'; g.beginPath(); g.arc(w/2,h/2,11,0,7); g.fill(); for(let y=0;y<h;y+=3){ g.fillStyle='#00000014'; g.fillRect(0,y,w,1);} for(let x=0;x<w;x+=3){ g.fillStyle='#00000010'; g.fillRect(x,0,1,h);} },128,192);
 const skyTex=()=>canvasTex((g,w,h)=>{ // NIGHT sky (Derek's photo, 2026-11-26): deep royal blue, dense stars, warm torch glow only at the horizon
   const gr=g.createLinearGradient(0,0,0,h); gr.addColorStop(0,'#02082e'); gr.addColorStop(.42,'#0a2aa6'); gr.addColorStop(.68,'#123a9e'); gr.addColorStop(.88,'#3a2c33'); gr.addColorStop(1,'#7a3d16'); g.fillStyle=gr; g.fillRect(0,0,w,h);
@@ -828,7 +847,7 @@ function impactMsFor(move){ const d=SWING_DEFS[move]||SWING_DEFS.attack; return 
 function makeKnight(colors){
   const g=new THREE.Group();
   const metalT=metalTex(), clothT=clothTex(), leatherT=leatherTex(), bladeT=bladeTex();
-  const M={ armor:std(colors.armor,.38,.75,{map:metalT,bumpMap:metalT,bumpScale:.012}), trim:std(colors.trim,.5,.6,{map:metalT,bumpMap:metalT,bumpScale:.01}), plume:std(colors.plume,.95,0,{map:clothT,bumpMap:clothT,bumpScale:.015}), shield:std(colors.shield,.42,.65,{map:metalT,bumpMap:metalT,bumpScale:.012}), steel:std(0xeaf2fc,.16,.96,{map:bladeT,bumpMap:bladeT,bumpScale:.005}), leather:std(0xffffff,.88,0,{map:leatherT,bumpMap:leatherT,bumpScale:.02}), gold:std(0xf7dd7a,.28,.9) };
+  const M={ armor:std(colors.armor,.27,.92,{map:metalT,bumpMap:metalT,bumpScale:.012,envMap:envTex(),envMapIntensity:1.05}), trim:std(colors.trim,.38,.8,{map:metalT,bumpMap:metalT,bumpScale:.01,envMap:envTex(),envMapIntensity:.9}), plume:std(colors.plume,.95,0,{map:clothT,bumpMap:clothT,bumpScale:.015}), shield:std(colors.shield,.3,.85,{map:metalT,bumpMap:metalT,bumpScale:.012,envMap:envTex(),envMapIntensity:1.0}), steel:std(0xeaf2fc,.16,.96,{map:bladeT,bumpMap:bladeT,bumpScale:.005,envMap:envTex(),envMapIntensity:1.1}), leather:std(0xffffff,.88,0,{map:leatherT,bumpMap:leatherT,bumpScale:.02}), gold:std(0xf7dd7a,.28,.9,{envMap:envTex(),envMapIntensity:1.0}) };
   const add=(mesh,x,y,z,parent)=>{ mesh.position.set(x,y,z); (parent||g).add(mesh); return mesh; };
   // legs: thick thigh + shin + leather boot, wider stance (hip pivots at y .95)
   const legL=new THREE.Group(); legL.position.set(-0.31,0.95,0); g.add(legL);
@@ -980,7 +999,7 @@ function initScene(){
   // LIGHT RIG: warm key (casts the shadows) + cool camera fill + cool rim from behind
   // + hemisphere/ambient base + a spotlight pool over the pit centre that pulses on impact.
   scene.add(new THREE.HemisphereLight(0x7a9aff,0x4a2c14,.45));
-  const sun=new THREE.DirectionalLight(0xffb066,1.4); sun.position.set(7,10,2.5); sun.castShadow=true; sun.shadow.mapSize.set(1024,1024); sun.shadow.camera.left=-11; sun.shadow.camera.right=11; sun.shadow.camera.top=11; sun.shadow.camera.bottom=-11; sun.shadow.camera.near=1; sun.shadow.camera.far=32; sun.shadow.bias=-0.0004; sun.shadow.normalBias=.03; scene.add(sun);
+  const sun=new THREE.DirectionalLight(0xffb066,1.4); sun.position.set(7,10,2.5); sun.castShadow=true; sun.shadow.mapSize.set(2048,2048); sun.shadow.camera.left=-11; sun.shadow.camera.right=11; sun.shadow.camera.top=11; sun.shadow.camera.bottom=-11; sun.shadow.camera.near=1; sun.shadow.camera.far=32; sun.shadow.bias=-0.0004; sun.shadow.normalBias=.03; scene.add(sun);
   const fill=new THREE.DirectionalLight(0x5a78ff,.22); fill.position.set(-7,4,8); scene.add(fill);
   const rim=new THREE.DirectionalLight(0xff9a50,.85); rim.position.set(-4,6,-9); scene.add(rim);
   scene.add(new THREE.AmbientLight(0x8fa8ff,.12));
@@ -989,7 +1008,7 @@ function initScene(){
   const sandT=sandTex(), stoneT=stoneTex();
   const ground=new THREE.Mesh(new THREE.CircleGeometry(7,36),new THREE.MeshStandardMaterial({map:sandT,color:0xdfc99c,bumpMap:sandT,bumpScale:.05,roughness:.96})); ground.rotation.x=-Math.PI/2; ground.receiveShadow=true; scene.add(ground);
   const ring=new THREE.Mesh(new THREE.RingGeometry(7,8.1,36),new THREE.MeshStandardMaterial({map:stoneT,bumpMap:stoneT,bumpScale:.04,roughness:.9})); ring.rotation.x=-Math.PI/2; ring.position.y=.01; ring.receiveShadow=true; scene.add(ring);
-  const apron=new THREE.Mesh(new THREE.CircleGeometry(16,36),std(0x4c463c,.95,.02)); apron.rotation.x=-Math.PI/2; apron.position.y=-.03; apron.receiveShadow=true; scene.add(apron);
+  const apron=new THREE.Mesh(new THREE.CircleGeometry(16,36),new THREE.MeshStandardMaterial({map:stoneT,color:0x8a8378,bumpMap:stoneT,bumpScale:.05,roughness:.94})); apron.rotation.x=-Math.PI/2; apron.position.y=-.03; apron.receiveShadow=true; scene.add(apron);
   // tiered stands all around + crowd silhouettes
   const stoneM=new THREE.MeshStandardMaterial({map:stoneT,bumpMap:stoneT,bumpScale:.04,roughness:.9});
   for(let tier=0;tier<3;tier++){ const r=9.6+tier*1.15; const h=.55+tier*.62; const seg=new THREE.Mesh(new THREE.CylinderGeometry(r,r,h,36,1,true),stoneM); seg.position.y=h/2; seg.receiveShadow=true; scene.add(seg); const lip=new THREE.Mesh(new THREE.RingGeometry(r-.55,r+.05,36),stoneM); lip.rotation.x=-Math.PI/2; lip.position.y=h; lip.receiveShadow=true; scene.add(lip);
