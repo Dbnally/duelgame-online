@@ -168,7 +168,7 @@ function saveDbNow() {
 function hashPw(password, salt) { return crypto.scryptSync(String(password), salt, 32).toString('hex'); }
 function newUser(password) {
   const salt = crypto.randomBytes(16).toString('hex');
-  return { salt, hash: hashPw(password, salt), gold: 50, owned: ['peasant'], outfit: 'peasant', wins: 0, losses: 0, trophies: 0, campaign: { active: false, round: 0, won: [] } };
+  return { salt, hash: hashPw(password, salt), gold: 50, owned: ['peasant'], outfit: 'peasant', wins: 0, losses: 0, trophies: 0, fights: 0, adBreakPending: false, adDay: '', adClaims: 0, campaign: { active: false, round: 0, won: [] } };
 }
 function checkPw(user, password) {
   const h = Buffer.from(hashPw(password, user.salt), 'hex');
@@ -372,11 +372,14 @@ function playerList() {
   return list;
 }
 function broadcastPlayers() { const l = playerList(); broadcast({ type: 'players', players: l }); }
+const AD_GOLD_AMOUNT = 10, AD_GOLD_DAILY_CAP = 5, AD_WATCH_MS = 30000;
+function adDayStr() { return new Date().toLocaleDateString('en-CA', { timeZone: 'America/Indiana/Indianapolis' }); }
+function adClaimsLeft(u) { return u.adDay === adDayStr() ? Math.max(0, AD_GOLD_DAILY_CAP - (u.adClaims || 0)) : AD_GOLD_DAILY_CAP; }
 function personalState(name) {
   const u = db.users[name]; if (!u) return;
   enforceNetGear(u);
   const c = clients.get(name);
-  send(c && c.ws, { type: 'state', gold: u.gold, wins: u.wins, losses: u.losses, owned: u.owned, outfit: u.outfit, trophies: u.trophies || 0, campaign: campaignOf(u) });
+  send(c && c.ws, { type: 'state', gold: u.gold, wins: u.wins, losses: u.losses, owned: u.owned, outfit: u.outfit, trophies: u.trophies || 0, fights: u.fights || 0, adBreakPending: !!u.adBreakPending, adClaimsLeft: adClaimsLeft(u), adGoldAmount: AD_GOLD_AMOUNT, campaign: campaignOf(u) });
 }
 function sysChat(text) { broadcast({ type: 'chat', from: '⚔️ Duelgame', text, kind: 'system' }); }
 
@@ -466,6 +469,9 @@ function startDuel(nameA, nameB, stake, opts) {
 function settleDuel(duel, winnerName, reason) {
   if (duel.settled) return false; // double-settle guard: pot is paid exactly once
   duel.settled = true;
+  // Ad breaks: count every completed fight per human player, server-side so a
+  // refresh cannot dodge it. Every 5th fight raises a pending ad break.
+  [duel.a, duel.b].forEach(n => { const u = db.users[n]; if (u) { u.fights = (u.fights || 0) + 1; if (u.fights % 5 === 0) u.adBreakPending = true; } });
   if (duel.timer) clearInterval(duel.timer);
   const loserName = winnerName === duel.a ? duel.b : duel.a;
   const winnerBot = botByName(winnerName), loserBot = botByName(loserName);
@@ -528,7 +534,7 @@ wss.on('connection', ws => {
     if (clients.has(name)) { const old = clients.get(name); try { old.ws.close(); } catch {} }
     clients.set(name, { ws, duelId: null });
     const u = db.users[name];
-    send(ws, { type: 'authOk', username: name, gold: u.gold, wins: u.wins, losses: u.losses, owned: u.owned, outfit: u.outfit, outfits: OUTFITS, bots: BOTS, players: playerList(), trophies: u.trophies || 0, campaign: campaignOf(u), campaignRounds: campaignInfo() });
+    send(ws, { type: 'authOk', username: name, gold: u.gold, wins: u.wins, losses: u.losses, owned: u.owned, outfit: u.outfit, outfits: OUTFITS, bots: BOTS, players: playerList(), trophies: u.trophies || 0, fights: u.fights || 0, adBreakPending: !!u.adBreakPending, adClaimsLeft: adClaimsLeft(u), adGoldAmount: AD_GOLD_AMOUNT, campaign: campaignOf(u), campaignRounds: campaignInfo() });
     broadcastPlayers();
     sysChat(`${name} entered the lobby.`);
     return name;
@@ -567,6 +573,25 @@ wss.on('connection', ws => {
     if (m.type === 'chat') {
       const text = String(m.text || '').trim().slice(0, 200);
       if (text) broadcast({ type: 'chat', from: me, text });
+      return;
+    }
+    if (m.type === 'adBreakDone') {
+      myUser.adBreakPending = false; saveDb(); personalState(me);
+      return;
+    }
+    if (m.type === 'adWatchStart') {
+      myClient.adWatchAt = Date.now();
+      send(ws, { type: 'adWatchStarted', needMs: AD_WATCH_MS });
+      return;
+    }
+    if (m.type === 'claimAdGold') {
+      if (adClaimsLeft(myUser) <= 0) return send(ws, { type: 'error', message: 'No free-gold claims left today — back tomorrow!' });
+      if (!myClient.adWatchAt || Date.now() - myClient.adWatchAt < AD_WATCH_MS) return send(ws, { type: 'error', message: 'The ad has not finished yet.' });
+      myClient.adWatchAt = 0;
+      const today = adDayStr(); if (myUser.adDay !== today) { myUser.adDay = today; myUser.adClaims = 0; }
+      myUser.adClaims++; myUser.gold += AD_GOLD_AMOUNT; saveDb();
+      send(ws, { type: 'adGoldOk', amount: AD_GOLD_AMOUNT, gold: myUser.gold });
+      personalState(me);
       return;
     }
     if (m.type === 'refill') {
