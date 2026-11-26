@@ -30,6 +30,38 @@ button:active{transform:scale(.96)}
 /* AdSense slots: hidden until a publisher ID is set (window.ADSENSE_PUB_ID). Never shown during a duel — login + lobby only, fight area untouched. */
 .adslot{display:none;text-align:center;overflow:hidden}
 body.ads-on .adslot{display:block}
+/* ---------- Login lighting & detail: spotlight, torch glow, embers ---------- */
+#loginScreen{position:relative;overflow:hidden}
+#loginScreen>*{position:relative;z-index:2}
+#loginScreen .spot{position:absolute;z-index:0;top:-12%;left:50%;transform:translateX(-50%);width:130%;height:75%;background:radial-gradient(50% 100% at 50% 0%,#ffe9a355 0%,#f7dd7a22 38%,transparent 70%);pointer-events:none}
+#loginScreen .floorGlow{position:absolute;z-index:0;bottom:-8%;left:50%;transform:translateX(-50%);width:120%;height:36%;background:radial-gradient(50% 100% at 50% 100%,#ff9a3c33 0%,transparent 70%);pointer-events:none}
+.torch{position:absolute;z-index:1;top:16%;font-size:30px;filter:drop-shadow(0 0 14px #ff9a3c) drop-shadow(0 0 34px #ff6a00aa);animation:torchFlicker 1.6s ease-in-out infinite alternate;pointer-events:none}
+.torch.left{left:7%}.torch.right{right:7%;animation-delay:.7s}
+@keyframes torchFlicker{from{transform:scale(1) rotate(-2deg);opacity:.88}to{transform:scale(1.14) rotate(2deg);opacity:1}}
+#loginKnight{text-align:center;margin:-2px 0 -4px;filter:drop-shadow(0 10px 14px #000c) drop-shadow(0 0 22px #f7dd7a33)}
+#loginScreen .rules{box-shadow:inset 0 1px 0 #f7dd7a2e,0 8px 22px #000a;border-color:#8a6d14}
+#loginScreen input{box-shadow:inset 0 2px 6px #000c,0 1px 0 #f7dd7a1f}
+#loginScreen h1{filter:drop-shadow(0 0 18px #f7dd7a44)}
+/* ---------- Set-up-your-fight screen (after login) ---------- */
+#setupScreen{position:fixed;inset:0;z-index:40;display:flex;flex-direction:column;background:radial-gradient(120% 80% at 50% 0%,#43320f 0%,#241a0c 52%,#120e08 100%);padding:14px 14px calc(10px + env(safe-area-inset-bottom));overflow-y:auto}
+#setupScreen.hidden{display:none}
+#setupScreen h2{margin:2px 0 0;text-align:center;color:var(--gold);font-size:24px;text-shadow:0 3px 0 #6b4e00,0 6px 16px #000}
+#setupStage{text-align:center;padding:6px 0 0;filter:drop-shadow(0 12px 16px #000c) drop-shadow(0 0 26px #f7dd7a30)}
+#setupMeta{text-align:center;font-size:13.5px;margin:2px 0 4px}
+.setupLabel{font-size:11px;letter-spacing:1.6px;color:var(--mut);text-transform:uppercase;margin:9px 0 5px;text-align:center}
+#setupStakes{display:flex;gap:6px;justify-content:center;flex-wrap:wrap}
+#setupStakes button{width:52px;height:44px;font-weight:800;font-size:15px}
+#setupStakes button.on{background:linear-gradient(180deg,var(--gold),var(--gold2));color:#1c150a;border-color:var(--gold)}
+#setupArmour{display:flex;gap:8px;overflow-x:auto;padding:4px 2px 8px;justify-content:flex-start}
+#setupArmour .sa{flex:0 0 auto;width:76px;background:var(--card);border:1px solid #453618;border-radius:10px;padding:4px 2px;text-align:center;font-size:10.5px;cursor:pointer}
+#setupArmour .sa.eq{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold2),0 0 12px #c9a22744}
+#setupArmour .sa svg{width:52px;height:59px}
+#setupChoices{margin-top:auto;display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding-top:10px}
+#setupChoices button{aspect-ratio:1/1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-weight:800;border-radius:14px;border-width:2px;padding:4px 2px}
+#setupChoices button .ci{font-size:30px;line-height:1}
+#setupChoices button .cl{font-size:11.5px;letter-spacing:.3px}
+#setupChoices #sqFb{background:linear-gradient(180deg,#2b5cb8,#17407f);border-color:#1877F2;color:#fff}
+#setupSkip{display:block;margin:10px auto 0;background:none;border:none;color:var(--mut);font-size:13px;text-decoration:underline;box-shadow:none}
 #adLogin{margin-top:2px}
 #adLobby{margin:8px 0 2px}
 .adslot .adlabel{font-size:10px;letter-spacing:1.5px;color:var(--mut);text-transform:uppercase;margin-bottom:2px}
@@ -135,7 +167,10 @@ select{background:#0d0a05;color:var(--ink);padding:7px;border-radius:8px;border:
 
 <!-- LOGIN -->
 <div id="loginScreen">
+  <div class="spot"></div><div class="floorGlow"></div>
+  <div class="torch left">🔥</div><div class="torch right">🔥</div>
   <h1>⚔️ Duelgame Online</h1>
+  <div id="loginKnight"></div>
   <p class="sub">The 3-Tick Duel Arena — now against <b>real online players</b>.</p>
   <div class="rules">🗡️ <b>Attack</b> beats Strength (4) · 💪 <b>Strength</b> beats Defence (6) · 🛡️ <b>Defence</b> beats Attack (2)<br>Same move: CLASH! 1/1 — defence/defence: GUARDED 0/0. 30 HP, one exchange every second (3 ticks). Hits knock you back — you walk back into reach, and a hit landed while you're still closing in glances for 1 less. Winner takes the pot.</div>
   <input id="uname" placeholder="Username" autocomplete="username">
@@ -156,6 +191,7 @@ select{background:#0d0a05;color:var(--ink);padding:7px;border-radius:8px;border:
     <span id="meNet" title="Net score: wins minus losses. Cool armour needs a high net — drop below and you lose it.">Net +0</span>
     <span id="meTrophies" class="hidden">🏆 <b class="gold" id="meTrophyN">0</b></span>
     <span class="sp"></span>
+    <button id="btnSetup" title="Set up your fight">⚔️ Setup</button>
     <button id="btnMute" title="Sound on/off">🔊</button>
     <button id="btnRefill" class="hidden" title="Free gold when you're broke">🪙 +50</button>
     <button id="btnForfeit" class="hidden" title="Forfeit the duel">🏳️</button>
@@ -197,7 +233,7 @@ select{background:#0d0a05;color:var(--ink);padding:7px;border-radius:8px;border:
       </section>
       <section id="panel-online" class="tabPanel">
         <h3 class="sec">🌐 Players — <span id="onlineCount">0</span></h3>
-        <div class="row"><label>🪙</label><select id="stakeSel"><option>5</option><option selected>10</option><option>25</option><option>50</option><option>100</option><option>250</option></select></div>
+        <div class="row"><label>🪙</label><select id="stakeSel"><option>5</option><option selected>10</option><option>25</option><option>50</option><option>100</option><option>250</option></select><button onclick="fbChallenge()" style="background:linear-gradient(180deg,#2b5cb8,#17407f);border-color:#1877F2;color:#fff;font-weight:700">f Challenge friends</button></div>
         <div id="playerList"></div>
       </section>
       <section id="panel-bots" class="tabPanel">
@@ -234,6 +270,24 @@ select{background:#0d0a05;color:var(--ink);padding:7px;border-radius:8px;border:
       <button data-tab="chat" title="Chat">💬</button>
     </nav>
   </div>
+</div>
+
+<!-- SET UP YOUR FIGHT (shown first after login) -->
+<div id="setupScreen" class="hidden">
+  <h2>⚔️ Set Up Your Fight</h2>
+  <div id="setupStage"></div>
+  <p id="setupMeta"></p>
+  <div class="setupLabel">Your stake (for player duels)</div>
+  <div id="setupStakes"></div>
+  <div class="setupLabel">Your armour — tap to wear</div>
+  <div id="setupArmour"></div>
+  <div id="setupChoices">
+    <button id="sqBots"><span class="ci">🤖</span><span class="cl">Practice Bots</span></button>
+    <button id="sqPlayers"><span class="ci">🌐</span><span class="cl">Duel Players</span></button>
+    <button id="sqTourney"><span class="ci">🏆</span><span class="cl">Tournament</span></button>
+    <button id="sqFb"><span class="ci">f</span><span class="cl">Challenge on Facebook</span></button>
+  </div>
+  <button id="setupSkip">Skip — just take me to the lobby</button>
 </div>
 
 <div id="challengePop">
@@ -307,6 +361,7 @@ function handle(m){
     $('meName').textContent='⚔️ '+me; applyState(m); renderShop(); renderPlayers(m.players); initScene();
     plateNameA=me; plateNameB=null; refreshNameplates(); // lobby: your name over your knight, right plate hidden
     const mine=(m.outfits||[]).find(o=>o.id===m.outfit); if(mine) setTimeout(()=>setKnightColors(knightA,mine.colors),350);
+    openSetup(); // first thing after login: set up your fight
     return;
   }
   if(m.type==='state'){ applyState(m); return; }
@@ -432,6 +487,7 @@ function applyState(m){
     toast('💔 Your '+(lost?lost.name:'armour')+' is gone — your net score dropped below its number. Win it back and rebuy it!',4200);
   }
   if(m.campaign) myCampaign=m.campaign; if(typeof m.trophies==='number') myTrophies=m.trophies; renderTrophies(); renderCampaign(); renderShop();
+  if(window._setupVisible && window._setupVisible()) renderSetup();
 }
 function renderCampaign(){
   const el=$('campBracket'); if(!el) return;
@@ -504,6 +560,32 @@ function renderShop(){
     return '<div class="item'+(eq?' eq':'')+'"><div class="prev">'+knightSVG(o)+'</div><b>'+esc(o.name)+'</b>'+netLine+'<br>'+(eq?'✅ Equipped':owned?'<button onclick="equip(\''+o.id+'\')">Wear</button>':'<button onclick="buy(\''+o.id+'\')">🪙 '+o.price+'</button>')+'</div>';
   }).join('');
 }
+// ---------- Set up your fight (first screen after login) ----------
+function renderSetup(){
+  const mine=(myOutfits||[]).find(o=>o.id===(window._outfit||'peasant'))||myOutfits[0];
+  if(mine) $('setupStage').innerHTML=knightSVG(mine);
+  const net=window._net||0;
+  $('setupMeta').innerHTML='<b>'+esc(me||'')+'</b> · 🪙 <b class="gold">'+(displayedGold==null?50:displayedGold)+'</b> · Net '+(net>=0?'+':'')+net;
+  $('setupStakes').innerHTML=[5,10,25,50,100,250].map(s=>'<button data-stake="'+s+'" class="'+(Number($('stakeSel').value)===s?'on':'')+'" onclick="setupStake('+s+')">'+s+'</button>').join('');
+  $('setupArmour').innerHTML=(myOutfits||[]).filter(o=>(window._owned||[]).includes(o.id)).map(o=>'<div class="sa'+(window._outfit===o.id?' eq':'')+'" onclick="setupWear(\''+o.id+'\')">'+knightSVG(o)+'<br>'+esc(o.name)+'</div>').join('');
+}
+window.setupStake=s=>{ $('stakeSel').value=String(s); document.querySelectorAll('#setupStakes button').forEach(b=>b.classList.toggle('on',Number(b.dataset.stake)===s)); sndClick(); };
+window.setupWear=id=>{ send({type:'equip',outfitId:id}); };
+function openSetup(){ renderSetup(); $('setupScreen').classList.remove('hidden'); }
+function closeSetup(tab){ $('setupScreen').classList.add('hidden'); if(tab) switchTab(tab); }
+$('btnSetup').onclick=()=>{ ensureAudio(); openSetup(); };
+$('setupSkip').onclick=()=>closeSetup();
+$('sqBots').onclick=()=>closeSetup('bots');
+$('sqPlayers').onclick=()=>closeSetup('online');
+$('sqTourney').onclick=()=>closeSetup('campaign');
+function fbChallenge(){
+  const url='https://duelgame-online.onrender.com';
+  const txt='⚔️ '+(me||'A knight')+' challenges YOU to a duel in Duelgame Online — winner takes the pot! Think you can win?';
+  window.open('https://www.facebook.com/sharer/sharer.php?u='+encodeURIComponent(url)+'&quote='+encodeURIComponent(txt),'_blank','width=640,height=560');
+}
+window.fbChallenge=fbChallenge;
+$('sqFb').onclick=()=>{ ensureAudio(); fbChallenge(); };
+window._setupVisible=()=>!$('setupScreen').classList.contains('hidden');
 window._shopPreviewCount=()=>document.querySelectorAll('#shop .item svg').length;
 window.buy=id=>send({type:'buy',outfitId:id});
 window.equip=id=>send({type:'equip',outfitId:id});
@@ -1027,6 +1109,7 @@ function animateExchange(m){
 function showCrown(overA){ if(!crown) return; const k=overA?knightA:knightB; if(!k) return; crown.position.set(k.position.x,4.6,0); crown.visible=true; crownDrop=0; liftPlates(true); }
 function hideCrown(){ if(crown) crown.visible=false; crownDrop=-1; liftPlates(false); }
 </script>
+<script>try{document.getElementById('loginKnight').innerHTML=knightSVG({name:'Champion',colors:{armor:'#e3b93c',trim:'#9e7d1c',plume:'#f7dd7a',shield:'#c9a227'}});}catch(e){}</script>
 <script>
 /* ---------- Google AdSense (dormant until Derek's publisher ID is set) ----------
    To turn ads ON: set ADSENSE_PUB_ID below to Derek's ID (looks like "ca-pub-1234567890123456")
