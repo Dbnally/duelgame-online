@@ -15,7 +15,13 @@ button:active{transform:scale(.96)}
 ::-webkit-scrollbar{width:5px}::-webkit-scrollbar-thumb{background:#57471f;border-radius:3px}
 
 /* ---------- LOGIN (fits 390x844 / 360x740, no scroll) ---------- */
-#loginScreen{height:100dvh;display:flex;flex-direction:column;justify-content:center;gap:10px;padding:18px 16px;max-width:520px;margin:0 auto;background:linear-gradient(180deg,rgba(4,10,38,.52) 0%,rgba(4,10,38,.34) 42%,rgba(6,8,20,.8) 100%),url('login-bg.jpg') center 24%/cover no-repeat #060814}
+#loginScreen{height:100dvh;display:flex;flex-direction:column;justify-content:flex-end;gap:10px;padding:18px 16px 7dvh;max-width:520px;margin:0 auto;background:linear-gradient(180deg,rgba(4,10,38,.52) 0%,rgba(4,10,38,.34) 42%,rgba(6,8,20,.8) 100%),url('login-bg.jpg') center 24%/cover no-repeat #060814}
+#loginCard{position:relative;display:flex;flex-direction:column;gap:10px;background:linear-gradient(180deg,rgba(24,33,74,.94),rgba(8,11,30,.96));border:2px solid #8a6d14;border-radius:16px;padding:20px 16px 14px;box-shadow:0 24px 55px #000c,inset 0 0 0 2px #05070f,inset 0 1px 0 #ffe9a34d,inset 0 -16px 30px #00000066}
+#loginCard::before{content:'';position:absolute;top:7px;left:16px;right:16px;height:2px;background:linear-gradient(90deg,transparent,#c9a227,transparent)}
+#loginCard::after{content:'';position:absolute;bottom:7px;left:16px;right:16px;height:2px;background:linear-gradient(90deg,transparent,#c9a22788,transparent)}
+#loginCard .sub{color:#c8d4ff}
+#loginCard input{background:#070a1c;border-color:#8a6d1488}
+#loginCard input:focus{outline:none;border-color:#c9a227;box-shadow:inset 0 2px 6px #000c,0 0 0 1px #c9a22766,0 0 14px #c9a22733}
 #loginScreen h1{letter-spacing:1.5px}
 #loginScreen .sub{color:#c8d4ff;text-shadow:0 1px 6px #000}
 #loginScreen h1{margin:0;text-align:center;font-size:30px;letter-spacing:.5px;color:var(--gold);text-shadow:0 3px 0 #6b4e00,0 6px 18px #000}
@@ -38,6 +44,17 @@ body.ads-on .adslot{display:block}
 #adSlotBox{min-height:250px;background:#070b22;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden}
 #adStatus{color:#cdd6ff;font-size:13.5px;margin:10px 0 6px;min-height:18px}
 #btnAdGold{border-color:#8a6d14}
+/* One finish everywhere: night-metal panels with gold trim, matching the login card */
+#tabPanels{background:linear-gradient(180deg,#0d1434,#060a20)}
+.tabPanel{padding:8px 9px}
+h3.sec{border-bottom:1px solid #8a6d1473;padding-bottom:4px;text-shadow:0 1px 2px #000}
+.player,.campRow{background:linear-gradient(180deg,#1a2450,#0d1330);border-color:#8a6d1473;border-radius:11px;box-shadow:inset 0 1px 0 #ffe9a326,0 3px 8px #0006}
+.shop .item{background:linear-gradient(180deg,#1a2450,#0d1330);border-color:#8a6d1473;border-radius:12px;box-shadow:inset 0 1px 0 #ffe9a326,0 3px 8px #0006}
+.shop .item .prev{border-color:#8a6d1473}
+#chat{background:#070a1c;border-color:#8a6d1473;border-radius:11px;box-shadow:inset 0 2px 8px #000a}
+#chatRow input{background:#070a1c;border-color:#8a6d1473}
+select{background:#0d1330;border-color:#8a6d1473}
+#setupScreen{background:radial-gradient(120% 80% at 50% 0%,#1d2a5e 0%,#0d1434 52%,#060a20 100%)}
 /* ---------- Login lighting & detail: spotlight, torch glow, embers ---------- */
 #loginScreen{position:relative;overflow:hidden}
 #loginScreen>*{position:relative;z-index:2}
@@ -179,6 +196,7 @@ select{background:#0d0a05;color:var(--ink);padding:7px;border-radius:8px;border:
 <div id="loginScreen">
   <div class="spot"></div><div class="floorGlow"></div>
   <div class="torch left">🔥</div><div class="torch right">🔥</div>
+  <div id="loginCard">
   <h1>⚔️ Nallystake</h1>
   <p class="sub">The 3-Tick Duel Arena — now against <b>real online players</b>.</p>
   <input id="uname" placeholder="Username" autocomplete="username">
@@ -188,6 +206,7 @@ select{background:#0d0a05;color:var(--ink);padding:7px;border-radius:8px;border:
   <button id="btnFacebook" type="button"><span class="fbF">f</span>Log in with Facebook</button>
   <p id="authErr"></p>
   <div class="adslot" id="adLogin"><div class="adlabel">Advertisement</div><ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-8773554474653193" data-ad-slot="8109311804" data-ad-format="auto" data-full-width-responsive="true"></ins></div>
+  </div>
 </div>
 
 <!-- GAME -->
