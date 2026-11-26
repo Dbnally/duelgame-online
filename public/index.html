@@ -414,7 +414,10 @@ function handle(m){
     setHp(m.hpA,m.hpB,true); $('winnerBanner').style.display='none'; $('winnerBanner').classList.remove('show'); $('wordBanner').textContent='';
     setKnightColors(knightA,m.colorsA); setKnightColors(knightB,m.colorsB);
     plateNameA=m.a; plateNameB=m.b; refreshNameplates(); // both fighters' names over their heads (bot name included)
-    resetKnightPose(); setSpot(knightA,1,2100); setSpot(knightB,1,2100);
+    resetKnightPose();
+    const profs=[{delay:30,dur:1750,rate:10.2,tick:.30,amp:.08,bend:.30},{delay:190,dur:1790,rate:12.3,tick:.41,amp:.058,bend:-.27}];
+    if(Math.random()<.5) profs.reverse();
+    [[knightA,profs[0]],[knightB,profs[1]]].forEach(([k,p])=>{ if(!k) return; const u=k.userData; u.strideRate=p.rate; u.strideTick=p.tick; u.bobAmp=p.amp; u.pathBend=p.bend; setSpot(k,1,p.dur,p.delay); });
     $('duelStatus').textContent=m.campaign?('🏆 Round '+m.round+' — win the '+m.prize+' gp prize! Pick your move!'):('Pot: '+m.pot+' gp — pick your move!');
     document.querySelectorAll('#moves button').forEach(b=>{ b.classList.remove('locked'); b.disabled=!duel.mine; });
     setCamMode('duel');
@@ -468,7 +471,7 @@ function handle(m){
     return;
   }
 }
-function endDuelUI(){ const wasCampaign=lastDuelCampaign; duel=null; lastDuelCampaign=false; resetKnightPose(); setSpot(knightA,0,1500); setSpot(knightB,0,1500); $('duelPanel').classList.add('hidden'); $('duelCampaignLine').classList.add('hidden'); $('lobbyContent').classList.remove('hidden'); $('panel-fight').classList.remove('dueling'); $('hpOverlay').classList.add('hidden'); $('btnForfeit').classList.add('hidden'); $('countdown').textContent=''; hideCrown(); setCamMode('lobby'); plateNameA=me; plateNameB=null; refreshNameplates(); clearHitLabels(); if(wasCampaign) switchTab('campaign'); }
+function endDuelUI(){ const wasCampaign=lastDuelCampaign; duel=null; lastDuelCampaign=false; resetKnightPose(); setSpot(knightA,0,1450,90); setSpot(knightB,0,1620,0); $('duelPanel').classList.add('hidden'); $('duelCampaignLine').classList.add('hidden'); $('lobbyContent').classList.remove('hidden'); $('panel-fight').classList.remove('dueling'); $('hpOverlay').classList.add('hidden'); $('btnForfeit').classList.add('hidden'); $('countdown').textContent=''; hideCrown(); setCamMode('lobby'); plateNameA=me; plateNameB=null; refreshNameplates(); clearHitLabels(); if(wasCampaign) switchTab('campaign'); }
 function renderTrophies(){ $('meTrophyN').textContent=myTrophies; $('meTrophies').classList.toggle('hidden',!(myTrophies>0)); }
 function coinPileSVG(g){ // a gold pile you can SEE grow with the amount
   const coin=(x,y,s)=>'<ellipse cx="'+x+'" cy="'+y+'" rx="'+(6*s)+'" ry="'+(2.6*s)+'" fill="#f7dd7a" stroke="#c9a227" stroke-width="1"/>';
@@ -880,8 +883,8 @@ const HOME_X=1.55, REACH_ALLOW=0.30, WALK_SPEED=2.4; // units/sec: a 0.9u walk-i
 function standX(k){ return k.userData.baseX - k.userData.facing*k.userData.dispPos; }
 /* Lobby spots: outside the fighting area, by the gate. spotMix 0 = waiting at
    the gate, 1 = in the pit at fight stance. Knights walk between the two. */
-function setSpot(k,to,durMs){ if(!k) return; const u=k.userData; u.spotAnim={from:u.spotMix,to:to,fromRy:u.spotRyMix||0,toRy:to,t:0,dur:(durMs||1500)/1000}; }
-function spotStep(u,dt){ if(!u.spotAnim) return false; const a=u.spotAnim; a.t+=dt/a.dur; const p=Math.min(1,a.t); const e=p*p*(3-2*p); u.spotMix=a.from+(a.to-a.from)*e; const rp=Math.min(1,p*2.4); u.spotRyMix=a.fromRy+(a.toRy-a.fromRy)*(rp*rp*(3-2*rp)); if(p>=1){ u.spotAnim=null; return false; } return true; }
+function setSpot(k,to,durMs,delayMs){ if(!k) return; const u=k.userData; u.spotAnim={from:u.spotMix,to:to,fromRy:u.spotRyMix||0,toRy:to,t:0,dur:(durMs||1500)/1000,delay:(delayMs||0)/1000}; }
+function spotStep(u,dt){ if(!u.spotAnim) return false; const a=u.spotAnim; if(a.delay>0){ a.delay-=dt; return false; } a.t+=dt/a.dur; const p=Math.min(1,a.t); const e=p*p*(3-2*p); u.spotMix=a.from+(a.to-a.from)*e; const rp=Math.min(1,p*2.4); u.spotRyMix=a.fromRy+(a.toRy-a.fromRy)*(rp*rp*(3-2*rp)); if(p>=1){ u.spotAnim=null; return false; } return true; }
 function setDisp(k,target,kind,dur){
   if(!k) return; const u=k.userData;
   const from=u.dispPos, dist=Math.abs(target-from);
@@ -1066,8 +1069,8 @@ function initScene(){
       // --- displacement: knockback slide OUT, then walk-forward back into reach ---
       let walking=false;
       if(u.dispAnim){ const da=u.dispAnim; const p=Math.min(1,(performance.now()-da.start)/da.durMs); const e=da.kind==='walk' ? p : 1-Math.pow(1-p,3); u.dispPos=da.from+(da.to-da.from)*e; walking=(da.kind==='walk'&&p<1); if(walking) u.walkPhase+=dt*11+.35; if(p>=1){ u.dispPos=da.to; u.dispAnim=null; } }
-      if(spotStep(u,dt)){ walking=true; u.walkPhase+=dt*11+.35; }
-      const bobY=(Math.abs(Math.sin(t*2.4+idx*1.7))*.05*(an.swing?.35:1)+(walking?Math.abs(Math.sin(u.walkPhase))*.07:0))*(1-deathE);
+      if(spotStep(u,dt)){ walking=true; u.walkPhase+=dt*(u.strideRate||11)+(u.strideTick||.35); }
+      const bobY=(Math.abs(Math.sin(t*2.4+idx*1.7))*.05*(an.swing?.35:1)+(walking?Math.abs(Math.sin(u.walkPhase))*(u.bobAmp||.07):0))*(1-deathE);
       u.shR.rotation.set(_pose.shX,0,_pose.shZ); u.elR.rotation.x=_pose.elX; u.wrR.rotation.x=_pose.wrX;
       u.shL.rotation.x=-.4-_pose.shield*.85; u.elL.rotation.x=-.55-_pose.shield*.3;
       u.shieldG.position.set(-.16-_pose.shield*.04,-.38+_pose.shield*.16,_pose.shield*.32);
@@ -1084,7 +1087,7 @@ function initScene(){
       const homeX=u.lobbyX+(u.baseX-u.lobbyX)*u.spotMix;
       k.position.x=homeX-u.facing*u.dispPos+u.facing*_pose.lunge+kx;
       k.position.y=bobY-_pose.crouch-.55*deathE;
-      k.position.z=u.lobbyZ*(1-u.spotMix); k.rotation.y=u.lobbyRy+(u.fightRy-u.lobbyRy)*(u.spotRyMix!=null?u.spotRyMix:u.spotMix); k.rotation.z=tilt*(1-deathE);
+      k.position.z=u.lobbyZ*(1-u.spotMix)+Math.sin(u.spotMix*Math.PI)*(u.pathBend||0); k.rotation.y=u.lobbyRy+(u.fightRy-u.lobbyRy)*(u.spotRyMix!=null?u.spotRyMix:u.spotMix); k.rotation.z=tilt*(1-deathE);
       updateTrail(u,dt);
       if(u.blob){ u.blob.position.x=k.position.x; u.blob.position.z=k.position.z; const bs=1+Math.abs(kx)*.25+_pose.crouch*.4; u.blob.scale.set(bs,bs,1); }
     });
