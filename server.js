@@ -419,6 +419,8 @@ function startDuel(nameA, nameB, stake, opts) {
   duel.timer = setInterval(() => {
     if (duel.settled) return;
     if (duel.phase === 'countdown') {
+      duel.cdTick = (duel.cdTick || 0) + 1;
+      if (duel.cdTick % 2 !== 0) return; // one number every ~666ms, so 3-2-1-FIGHT! reads clearly while the fighters walk in
       count--;
       if (count > 0) { broadcast({ type: 'duelCountdown', duelId: id, n: count }); return; }
       duel.phase = 'fight';
