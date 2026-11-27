@@ -570,6 +570,9 @@ function handle(m){
     if(duel && duel.practice && duel.mine) status=practiceCoach(m);
     else if(duel && !duel.mine) status='📺 '+status;
     $('duelStatus').textContent=status;
+    // Auto-fight-back: if I've never picked a move, the game fights for me —
+    // say so on the Set line so it never looks like my knight is just standing there.
+    if(duel && duel.mine && !lockedMove){ const iAmA=duel.a===me; const myAuto=iAmA?m.autoA:m.autoB; if(myAuto){ const mv=iAmA?m.moveA:m.moveB; const sl=$('setMoveLine'); if(sl&&MOVE_META[mv]) sl.textContent='🤖 Auto-fighting: '+MOVE_META[mv].icon+' '+MOVE_META[mv].label+' — tap a move to take over.'; } }
     return;
   }
   if(m.type==='duelEnd'){
