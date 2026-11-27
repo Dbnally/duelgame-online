@@ -138,6 +138,35 @@ function resolveExchange(a, b) {
 // The triangle winner NEVER changes; clash/GUARDED are never glanced.
 const HOME_GAP = 3.1;   // stance: knights at x ±1.55
 const REACH_GAP = 3.4;  // can hit while gap <= this
+const PIT_R = 4.6;      // duel movement stays inside this radius
+const RUN_WALK = 2.7;   // units/second toward a fresh tap target — a touch faster…
+const CHASE_WALK = 2.25; // …than the auto-chase, so a clean run really opens distance and whiffs land
+function clampPit(p) { const rr = Math.hypot(p.x, p.z); if (rr > PIT_R) { p.x = Math.round(p.x / rr * PIT_R * 1000) / 1000; p.z = Math.round(p.z / rr * PIT_R * 1000) / 1000; } }
+function pushFrom(p, from, amt) { let dx = p.x - from.x, dz = p.z - from.z; let d = Math.hypot(dx, dz); if (d < 0.001) { dx = p.x >= 0 ? 1 : -1; dz = 0; d = 1; } p.x = Math.round((p.x + dx / d * amt) * 1000) / 1000; p.z = Math.round((p.z + dz / d * amt) * 1000) / 1000; clampPit(p); }
+// Duel movement (Derek, 2026-11-26): a fighter with a fresh tap target runs
+// to it; everyone else auto-follows their opponent back to stance distance —
+// so running makes hits whiff, and the chase always closes back in.
+function stepDuelMovement(duel) {
+  const P = duel.pos;
+  for (const s of ['a', 'b']) {
+    const mp = P[s], opp = P[s === 'a' ? 'b' : 'a'];
+    let tx = null, tz = null, speed = CHASE_WALK;
+    const mt = duel.mt[s];
+    if (mt && Date.now() < mt.until && Math.hypot(mt.x - mp.x, mt.z - mp.z) > 0.08) { tx = mt.x; tz = mt.z; speed = RUN_WALK; }
+    else {
+      duel.mt[s] = null;
+      const dx = mp.x - opp.x, dz = mp.z - opp.z, sep = Math.hypot(dx, dz);
+      if (sep > HOME_GAP && sep > 0.001) { tx = opp.x + dx / sep * HOME_GAP; tz = opp.z + dz / sep * HOME_GAP; }
+    }
+    if (tx === null) continue;
+    const dx = tx - mp.x, dz = tz - mp.z, d = Math.hypot(dx, dz);
+    if (d < 0.001) continue;
+    const st = Math.min(d, speed / 3); // per 333ms tick
+    mp.x = Math.round((mp.x + dx / d * st) * 1000) / 1000;
+    mp.z = Math.round((mp.z + dz / d * st) * 1000) / 1000;
+    clampPit(mp);
+  }
+}
 const knockbackFor = dmg => dmg <= 0 ? 0 : Math.round((0.25 + 0.16 * dmg) * 1000) / 1000;
 // Walk-forward model (mirrored by the client): during a cycle, displaced fighters
 // walk in until the combined displacement leaves the gap exactly at REACH_GAP.
@@ -485,7 +514,7 @@ function playerList() {
   return list;
 }
 function duelSummary() {
-  return [...duels.values()].map(d => ({ duelId: d.id, a: d.a, b: d.b, stake: d.stake, campaign: !!d.campaign, round: d.round || 0, practice: !!d.practice, explore: d.explore || 0, hpA: Math.max(0, d.hp.a), hpB: Math.max(0, d.hp.b) }));
+  return [...duels.values()].map(d => ({ duelId: d.id, a: d.a, b: d.b, stake: d.stake, campaign: !!d.campaign, round: d.round || 0, practice: !!d.practice, explore: d.explore || 0, hpA: Math.max(0, d.hp.a), hpB: Math.max(0, d.hp.b), posA: d.pos ? d.pos.a : null, posB: d.pos ? d.pos.b : null }));
 }
 function broadcastPlayers() { const l = playerList(); broadcast({ type: 'players', players: l, duels: duelSummary() }); }
 // ---------- Challenge queue (Derek, 2026-11-26): challenging a player who is
@@ -528,7 +557,7 @@ function quickBackfill(name) {
   const c = clients.get(name); const u = db.users[name];
   if (!c || !u || c.duelId) return;
   for (const [t, p] of pending) if (p.from === name) pending.delete(t); // withdraw my unanswered offer
-  const free = BOTS.filter(b => !botState[b.id].duelId && u.gold >= b.stake);
+  const free = BOTS.filter(b => !b.campaignOnly && !botState[b.id].duelId && u.gold >= b.stake);
   const bot = free.length ? free[Math.floor(Math.random() * free.length)] : null;
   if (!bot) { send(c.ws, { type: 'error', message: 'No players free and every bot is busy or beyond your gold — try again in a moment.' }); return; }
   send(c.ws, { type: 'quickMatchBot', bot: bot.name });
@@ -574,6 +603,8 @@ function startDuel(nameA, nameB, stake, opts) {
     defStreak: { a: 0, b: 0 },          // consecutive Defence picks (3rd+ blocks for 0)
     botMemory: { guard: 0, warn: false, lastMove: null },
     exch: 0,
+    pos: { a: { x: -HOME_GAP / 2, z: 0 }, b: { x: HOME_GAP / 2, z: 0 } }, // physical spots in the pit
+    mt: { a: null, b: null },           // manual run targets {x, z, until} from ground taps
     disp: { a: 0, b: 0 },               // authoritative knockback displacement per fighter
     locked: { a: null, b: null }, last: { a: 'attack', b: 'attack' },
     historyA: [], tick: 0, settled: false, phase: 'countdown', timer: null,
@@ -585,7 +616,7 @@ function startDuel(nameA, nameB, stake, opts) {
   personalState(nameA); if (ub) personalState(nameB);
   broadcastPlayers();
   const colorsOf = n => { const bot = botByName(n); if (bot) return bot.colors; const u = db.users[n]; return outfitById(u ? u.outfit : 'peasant').colors; };
-  broadcast({ type: 'duelStart', duelId: id, a: nameA, b: nameB, stake, pot: duel.pot, hpA: MAX_HP, hpB: MAX_HP, colorsA: colorsOf(nameA), colorsB: colorsOf(nameB), homeGap: HOME_GAP, reachGap: REACH_GAP, dispA: 0, dispB: 0, campaign: isCampaign, practice: isPractice, explore: duel.explore, round: duel.round, prize: duel.prize });
+  broadcast({ type: 'duelStart', duelId: id, a: nameA, b: nameB, stake, pot: duel.pot, hpA: MAX_HP, hpB: MAX_HP, colorsA: colorsOf(nameA), colorsB: colorsOf(nameB), homeGap: HOME_GAP, reachGap: REACH_GAP, dispA: 0, dispB: 0, posA: duel.pos.a, posB: duel.pos.b, campaign: isCampaign, practice: isPractice, explore: duel.explore, round: duel.round, prize: duel.prize });
   if (isCampaign) sysChat(`🏆 Campaign Round ${duel.round}: ${nameA} vs ${nameB} — ${duel.prize} gp prize!`);
   else if (isExplore) sysChat(`🗺️ ${nameA} delves deeper — tunnel fight ${duel.explore} of 3 vs ${nameB}!`);
   else if (isPractice) sysChat(`🎓 ${nameA} is learning the ropes — practice duel vs ${nameB}, no gold on the line.`);
@@ -604,7 +635,8 @@ function startDuel(nameA, nameB, stake, opts) {
       return;
     }
     duel.tick++;
-    broadcast({ type: 'duelTick', duelId: id, tick: duel.tick, tickInExchange: ((duel.tick - 1) % 3) + 1 });
+    stepDuelMovement(duel);
+    broadcast({ type: 'duelTick', duelId: id, tick: duel.tick, tickInExchange: ((duel.tick - 1) % 3) + 1, posA: duel.pos.a, posB: duel.pos.b });
     if (duel.tick % 3 !== 0) return;
     // Practice duel: the first 3 exchanges WAIT for the learner's tap — no
     // auto-play while they're still reading the screen (playtest fix 1.1).
@@ -620,6 +652,11 @@ function startDuel(nameA, nameB, stake, opts) {
     // Walk-forward happened during this cycle: displaced fighters close back into reach.
     const walked = applyWalkForward(duel.disp);
     const r = resolveExchange(moveA, moveB);
+    // Derek's range rule (2026-11-26): hits only count side by side. If the
+    // pair has separated past reach — somebody ran — both swings whiff.
+    const sepNow = Math.hypot(duel.pos.a.x - duel.pos.b.x, duel.pos.a.z - duel.pos.b.z);
+    const missed = sepNow > REACH_GAP;
+    if (missed) { r.aDmg = 0; r.bDmg = 0; r.word = 'MISS!'; r.winner = null; }
     // Riposte: GUARDED arms +1 for the NEXT exchange's winner; any other
     // exchange spends it. Anti-turtle: a 3rd straight Defence blocks for 0.
     let riposteSide = null, turtleSide = null;
@@ -653,9 +690,12 @@ function startDuel(nameA, nameB, stake, opts) {
     const kbA = knockbackFor(r.aDmg), kbB = knockbackFor(r.bDmg);
     duel.disp.a = Math.round((duel.disp.a + kbA) * 1000) / 1000;
     duel.disp.b = Math.round((duel.disp.b + kbB) * 1000) / 1000;
+    // Knockback is physical too: the hit shoves you away from your opponent.
+    if (kbA > 0) pushFrom(duel.pos.a, duel.pos.b, kbA);
+    if (kbB > 0) pushFrom(duel.pos.b, duel.pos.a, kbB);
     duel.offBalance.a = r.aDmg >= 2;
     duel.offBalance.b = r.bDmg >= 2;
-    broadcast({ type: 'duelExchange', duelId: id, a: duel.a, b: duel.b, moveA, moveB, aDmg: r.aDmg, bDmg: r.bDmg, word: r.word, winnerSide: r.winner, hpA: Math.max(0, duel.hp.a), hpB: Math.max(0, duel.hp.b), kbA, kbB, glance, glanceA: glance === 'a', glanceB: glance === 'b', dispA: duel.disp.a, dispB: duel.disp.b, walkedA: walked.a, walkedB: walked.b, offBalanceA: wasOff.a, offBalanceB: wasOff.b, riposte: riposteSide, turtle: turtleSide, warnBram, practice: !!duel.practice, exch: duel.exch });
+    broadcast({ type: 'duelExchange', duelId: id, a: duel.a, b: duel.b, moveA, moveB, aDmg: r.aDmg, bDmg: r.bDmg, word: r.word, winnerSide: r.winner, hpA: Math.max(0, duel.hp.a), hpB: Math.max(0, duel.hp.b), kbA, kbB, glance, glanceA: glance === 'a', glanceB: glance === 'b', dispA: duel.disp.a, dispB: duel.disp.b, walkedA: walked.a, walkedB: walked.b, offBalanceA: wasOff.a, offBalanceB: wasOff.b, riposte: riposteSide, turtle: turtleSide, warnBram, practice: !!duel.practice, exch: duel.exch, miss: missed, sep: Math.round(sepNow * 100) / 100, posA: duel.pos.a, posB: duel.pos.b });
     if (duel.hp.a <= 0 || duel.hp.b <= 0) {
       let winner;
       if (duel.hp.a <= 0 && duel.hp.b <= 0) winner = duel.hp.a === duel.hp.b ? duel.a : (duel.hp.a > duel.hp.b ? duel.a : duel.b);
@@ -981,6 +1021,17 @@ wss.on('connection', ws => {
       if (reward.kind !== 'gold') sysChat(`⭐ ${me} opened a reward scroll and found: ${reward.name}!`);
       return;
     }
+    if (m.type === 'duelRun') {
+      const d = myClient.duelId && duels.get(myClient.duelId);
+      if (d && !d.settled) {
+        let x = Number(m.x), z = Number(m.z);
+        if (isFinite(x) && isFinite(z)) {
+          const rr = Math.hypot(x, z); if (rr > PIT_R) { x = x / rr * PIT_R; z = z / rr * PIT_R; }
+          d.mt[d.a === me ? 'a' : 'b'] = { x: Math.round(x * 1000) / 1000, z: Math.round(z * 1000) / 1000, until: Date.now() + 2600 };
+        }
+      }
+      return;
+    }
     if (m.type === 'quickMatch') {
       const stake = Number(m.stake);
       if (myClient.duelId) return send(ws, { type: 'error', message: 'You are already in a duel.' });
@@ -1138,4 +1189,4 @@ wss.on('connection', ws => {
 });
 
 server.listen(PORT, () => console.log(`Duelgame Online listening on :${PORT} (db: ${DB_PATH})`));
-module.exports = { _settleById, _mintFbTokenForTest, duels, db, resolveExchange, knockbackFor, applyWalkForward, HOME_GAP, REACH_GAP, BOTS, OUTFITS, CAMPAIGN_ROUNDS, campaignInfo, fbConfigured, FB_REDIRECT_URI, netOf, enforceNetGear, PETS, ACCESSORIES, EXPLORE_BOTS, highscores, rollClueReward };
+module.exports = { _settleById, _mintFbTokenForTest, duels, db, resolveExchange, knockbackFor, applyWalkForward, HOME_GAP, REACH_GAP, PIT_R, stepDuelMovement, BOTS, OUTFITS, CAMPAIGN_ROUNDS, campaignInfo, fbConfigured, FB_REDIRECT_URI, netOf, enforceNetGear, PETS, ACCESSORIES, EXPLORE_BOTS, highscores, rollClueReward };
