@@ -174,6 +174,15 @@ function stepDuelMovement(duel) {
     const sep = Math.hypot(P.a.x - P.b.x, P.a.z - P.b.z);
     if (sep > (duel.maxSep || 0)) duel.maxSep = sep;
   }
+  // Never let the pair overlap: if a chase or a crossing run squeezes them
+  // inside sword-stance, ease them apart (live probe saw gaps of 0.5, which
+  // reads as the knights standing inside each other).
+  const dxs = P.b.x - P.a.x, dzs = P.b.z - P.a.z, seps = Math.hypot(dxs, dzs);
+  if (seps < 2.6 && seps > 0.001) {
+    const push = (2.6 - seps) / 2, ux = dxs / seps, uz = dzs / seps;
+    P.a.x -= ux * push; P.a.z -= uz * push; P.b.x += ux * push; P.b.z += uz * push;
+    clampPit(P.a); clampPit(P.b);
+  }
 }
 const knockbackFor = dmg => dmg <= 0 ? 0 : Math.round((0.25 + 0.16 * dmg) * 1000) / 1000;
 // Walk-forward model (mirrored by the client): during a cycle, displaced fighters
@@ -668,7 +677,11 @@ function startDuel(nameA, nameB, stake, opts) {
     // Derek's range rule (2026-11-26): hits only count side by side. If the
     // pair has separated past reach — somebody ran — both swings whiff.
     const sepNow = Math.hypot(duel.pos.a.x - duel.pos.b.x, duel.pos.a.z - duel.pos.b.z);
-    const missed = Math.max(sepNow, duel.maxSep || 0) > REACH_GAP;
+    // Derek's rule: hits count only side by side. Whiff if the gap ever
+    // opened past reach during this swing, or if a fighter is still mid-run
+    // and the pair isn't locked back into stance yet.
+    const midRun = (duel.mt.a && Date.now() < duel.mt.a.until) || (duel.mt.b && Date.now() < duel.mt.b.until);
+    const missed = Math.max(sepNow, duel.maxSep || 0) > REACH_GAP || (midRun && sepNow > 3.0);
     duel.maxSep = 0;
     if (missed) { r.aDmg = 0; r.bDmg = 0; r.word = 'MISS!'; r.winner = null; }
     // Riposte: GUARDED arms +1 for the NEXT exchange's winner; any other
