@@ -607,6 +607,7 @@ function startDuel(nameA, nameB, stake, opts) {
     mt: { a: null, b: null },           // manual run targets {x, z, until} from ground taps
     disp: { a: 0, b: 0 },               // authoritative knockback displacement per fighter
     locked: { a: null, b: null }, last: { a: 'attack', b: 'attack' },
+    chosen: { a: false, b: false }, // has this fighter ever picked a move? (else the game auto-fights for them)
     historyA: [], tick: 0, settled: false, phase: 'countdown', timer: null,
   };
   duels.set(id, duel);
@@ -642,6 +643,10 @@ function startDuel(nameA, nameB, stake, opts) {
     // auto-play while they're still reading the screen (playtest fix 1.1).
     if (duel.practice && duel.exch < 3 && !duel.locked.a) return;
     if (duel.isBotDuel) duel.locked.b = duel.practice ? PRACTICE_PATTERN[duel.exch % PRACTICE_PATTERN.length] : pickBotMove(botDef, duel);
+    // Derek 2026-11-26: you ALWAYS fight back. A fighter who has never picked
+    // a move auto-fights (Attack first, then repeats their last move); the
+    // exchange says autoA/autoB so their screen can show it's on auto.
+    const autoA = !duel.chosen.a, autoB = duel.isBotDuel ? false : !duel.chosen.b;
     const moveA = duel.locked.a || duel.last.a;
     const moveB = duel.locked.b || duel.last.b;
     duel.last.a = moveA; duel.last.b = moveB;
@@ -695,7 +700,7 @@ function startDuel(nameA, nameB, stake, opts) {
     if (kbB > 0) pushFrom(duel.pos.b, duel.pos.a, kbB);
     duel.offBalance.a = r.aDmg >= 2;
     duel.offBalance.b = r.bDmg >= 2;
-    broadcast({ type: 'duelExchange', duelId: id, a: duel.a, b: duel.b, moveA, moveB, aDmg: r.aDmg, bDmg: r.bDmg, word: r.word, winnerSide: r.winner, hpA: Math.max(0, duel.hp.a), hpB: Math.max(0, duel.hp.b), kbA, kbB, glance, glanceA: glance === 'a', glanceB: glance === 'b', dispA: duel.disp.a, dispB: duel.disp.b, walkedA: walked.a, walkedB: walked.b, offBalanceA: wasOff.a, offBalanceB: wasOff.b, riposte: riposteSide, turtle: turtleSide, warnBram, practice: !!duel.practice, exch: duel.exch, miss: missed, sep: Math.round(sepNow * 100) / 100, posA: duel.pos.a, posB: duel.pos.b });
+    broadcast({ type: 'duelExchange', duelId: id, a: duel.a, b: duel.b, moveA, moveB, aDmg: r.aDmg, bDmg: r.bDmg, word: r.word, winnerSide: r.winner, hpA: Math.max(0, duel.hp.a), hpB: Math.max(0, duel.hp.b), kbA, kbB, glance, glanceA: glance === 'a', glanceB: glance === 'b', dispA: duel.disp.a, dispB: duel.disp.b, walkedA: walked.a, walkedB: walked.b, offBalanceA: wasOff.a, offBalanceB: wasOff.b, riposte: riposteSide, turtle: turtleSide, warnBram, practice: !!duel.practice, exch: duel.exch, miss: missed, sep: Math.round(sepNow * 100) / 100, posA: duel.pos.a, posB: duel.pos.b, autoA, autoB });
     if (duel.hp.a <= 0 || duel.hp.b <= 0) {
       let winner;
       if (duel.hp.a <= 0 && duel.hp.b <= 0) winner = duel.hp.a === duel.hp.b ? duel.a : (duel.hp.a > duel.hp.b ? duel.a : duel.b);
@@ -1161,8 +1166,8 @@ wss.on('connection', ws => {
       if (!MOVES.includes(m.move)) return;
       const d = myClient.duelId && duels.get(myClient.duelId);
       if (!d || d.phase !== 'fight') return;
-      if (d.a === me) d.locked.a = m.move;
-      else if (d.b === me) d.locked.b = m.move;
+      if (d.a === me) { d.locked.a = m.move; d.chosen.a = true; }
+      else if (d.b === me) { d.locked.b = m.move; d.chosen.b = true; }
       return;
     }
     if (m.type === 'forfeit') {
