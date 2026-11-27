@@ -235,6 +235,7 @@ select{background:#0d0a05;color:var(--ink);padding:7px;border-radius:8px;border:
   <p class="loginOr">— or —</p>
   <button id="btnFacebook" type="button"><span class="fbF">f</span>Log in with Facebook</button>
   <p id="authErr"></p>
+  <p class="hint" style="margin:2px 0 0">🧪 <b>Beta</b> — the game is still being built, so accounts may reset on updates. Sorry if your gold or gear vanishes — the fighting is forever.</p>
   <div class="adslot" id="adLogin"><div class="adlabel">Advertisement</div><ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-8773554474653193" data-ad-slot="8109311804" data-ad-format="auto" data-full-width-responsive="true"></ins></div>
   </div>
 </div>
@@ -276,6 +277,7 @@ select{background:#0d0a05;color:var(--ink);padding:7px;border-radius:8px;border:
             <p id="postFightTitle"></p>
             <p id="postFightLines"></p>
             <div class="row"><button id="btnRematch">🔁 Rematch</button><button id="btnPickOpp">Pick opponent</button></div>
+            <div class="row hidden" id="shareRow"><button onclick="shareWin()">📣 Share this win</button><button onclick="copyInvite()">🔗 Copy invite link</button></div>
           </div>
           <h3 class="sec">⚔️ Fight</h3>
           <p style="margin:4px 0 8px;font-size:13.5px;line-height:1.5">Challenge a 🌐 player, or practice vs a 🤖 bot.</p>
@@ -306,6 +308,8 @@ select{background:#0d0a05;color:var(--ink);padding:7px;border-radius:8px;border:
       <section id="panel-online" class="tabPanel">
         <h3 class="sec">🌐 Players — <span id="onlineCount">0</span></h3>
         <div class="row"><label>🪙</label><select id="stakeSel"><option>5</option><option selected>10</option><option>25</option><option>50</option><option>100</option><option>250</option></select><button onclick="fbChallenge()" style="background:linear-gradient(180deg,#2b5cb8,#17407f);border-color:#1877F2;color:#fff;font-weight:700">f Challenge friends</button></div>
+        <button class="bigbtn" onclick="quickMatch()" style="width:100%;margin:2px 0 4px">⚡ Quick match — fight anyone</button>
+        <div class="hint" style="margin:0 0 6px">Offers a free player the stake picked above. Nobody bites within 10 seconds? A bot steps in instead — no hanging around.</div>
         <div id="playerList"></div>
         <div id="queueBox"></div>
       </section>
@@ -406,6 +410,11 @@ select{background:#0d0a05;color:var(--ink);padding:7px;border-radius:8px;border:
   <div class="row" style="justify-content:center;margin-top:10px"><button id="btnAccept">✅ Accept</button><button id="btnDecline">❌ Decline</button></div>
 </div>
 
+<div id="knightPop" class="hidden" style="position:fixed;left:12px;right:12px;bottom:12px;z-index:21;background:rgba(10,14,30,.95);border:1.5px solid #d4af37;border-radius:12px;padding:10px;text-align:center;box-shadow:0 10px 40px #000">
+  <div id="knightPopName" style="font-weight:800;margin-bottom:6px"></div>
+  <div class="row" style="justify-content:center"><button id="knightPopBtn">⚔️ Challenge</button><button onclick="hideKnightPop()">✕</button></div>
+</div>
+
 <script>
 let ws=null, me=null, myOutfits=[], pendingAuth=null, duel=null, lockedMove=null, muted=false, prevHp={a:30,b:30};
 let myCampaign=null, myTrophies=0, myCampaignRounds=[{botId:'pip',name:'Squire Pip',prize:10},{botId:'bram',name:'Hedge Knight Bram',prize:20},{botId:'mara',name:'Pit Dog Mara',prize:40},{botId:'champion',name:'Arena Champion',prize:100}], lastDuelCampaign=false;
@@ -493,6 +502,9 @@ function handle(m){
   if(m.type==='refillOk'){ toast('🏠 The house stakes you 50 gp — win it back! Gold: '+m.gold); return; }
   if(m.type==='challengeSent'){ if(m.queued) myQueues.delete(m.to); toast(m.queued?('⏳ Your queued challenge reached '+m.to+' — offered now!'):('Challenge sent to '+m.to+' for '+m.stake+' gp…')); if(lastPlayers.length) renderPlayers(lastPlayers); return; }
   if(m.type==='challengeQueued'){ myQueues.set(m.target,m.stake); toast('⏳ '+m.target+' is in a fight vs '+m.vs+' — your '+m.stake+' gp challenge will be offered the moment it ends.',4200); renderQueueBox(); if(lastPlayers.length) renderPlayers(lastPlayers); return; }
+  if(m.type==='quickMatchSent'){ toast('⚡ Offer sent to '+m.target+' for '+m.stake+' gp — if they don\'t bite in 10 seconds, a bot steps in.',3600); return; }
+  if(m.type==='quickMatchWait'){ toast('⚡ No free players right now — a bot steps in within 10 seconds…',3600); return; }
+  if(m.type==='quickMatchBot'){ toast('🤖 No players free — the arena matched you with '+m.bot+' instead.',3600); return; }
   if(m.type==='challengeQueueCancelled'){ myQueues.delete(m.target); toast('Queued challenge to '+m.target+' cancelled.'); renderQueueBox(); if(lastPlayers.length) renderPlayers(lastPlayers); return; }
   if(m.type==='adWatchStarted'){ if(m.endsAt) adEndsAt=m.endsAt; return; }
   if(m.type==='challengeIncoming'){
@@ -613,8 +625,8 @@ function stageDuel(info,fresh){
   $('btnForfeit').classList.toggle('hidden',!duel.mine);
   $('hpALabel').textContent=info.a; $('hpBLabel').textContent=info.b; $('ovNameA').textContent=info.a; $('ovNameB').textContent=info.b;
   setHp(info.hpA,info.hpB,true); $('winnerBanner').style.display='none'; $('winnerBanner').classList.remove('show'); $('wordBanner').textContent='';
-  if(knightA){ knightA.visible=true; setKnightColors(knightA,info.colorsA); setHat(knightA,accFor(info.a)); }
-  if(knightB){ knightB.visible=true; setKnightColors(knightB,info.colorsB); setHat(knightB,accFor(info.b)); }
+  if(knightA){ knightA.visible=true; setKnightColors(knightA,info.colorsA); setHat(knightA,accFor(info.a)); knightA.userData.playerName=info.a; }
+  if(knightB){ knightB.visible=true; setKnightColors(knightB,info.colorsB); setHat(knightB,accFor(info.b)); knightB.userData.playerName=info.b; }
   plateNameA=info.a; plateNameB=info.b; refreshNameplates();
   resetKnightPose();
   if(fresh){
@@ -659,6 +671,7 @@ function practiceCoach(m){
 function showPostFight(pf){
   const el=$('postFight'); if(!el) return;
   $('btnRematch').textContent='🔁 Rematch'; $('btnPickOpp').textContent='Pick opponent';
+  $('shareRow').classList.toggle('hidden', !(pf.won && !pf.practice && !pf.explore && !pf.campaign)); // brag buttons on real wins
   let title; const lines=[];
   if(pf.practice){ title=pf.won?'🎓 Practice won!':'🎓 Practice over'; lines.push('No gold on the line — that was the lesson. Real fights vs Pip pay 5 gp a win.'); }
   else if(pf.explore){ const ex=window._explore||{step:0,done:false}; title=pf.won?('🗺️ Tunnel fight '+pf.explore+' of 3 cleared!'):'🗺️ Tunnel run over'; if(pf.won&&ex.done) lines.push('🎁 A chest waits in the tunnel — open it from the Fight tab!'); else if(pf.won) lines.push('Deeper you go — '+(3-(ex.step||1)+1)+' fights between you and the chest.'); else lines.push('The tunnel resets. Go Explore to try again.'); $('btnRematch').textContent=pf.won?(ex.done?'🎁 Open the chest':'▶ Next tunnel fight'):'🔁 Rematch'; }
@@ -729,6 +742,7 @@ function applyState(m){
   if(m.adBreakPending) adBreakWanted=true;
   if(typeof m.campaignBest==='number') myCampaignBest=m.campaignBest;
   if(m.scores) window._scores=m.scores;
+  if(m.lastFights) window._form=m.lastFights;
   if(typeof m.streak==='number') window._streak=m.streak;
   if(typeof m.bankGold==='number'||m.bankItems){ window._bank={gold:m.bankGold||0,items:m.bankItems||[]}; }
   if(m.petsOwned||'pet' in m){ window._myPets={owned:m.petsOwned||[],pet:m.pet||null}; }
@@ -808,6 +822,15 @@ function renderQueueBox(){
 window.cancelQueue=name=>send({type:'challengeCancel',target:name});
 window.challenge=name=>send({type:'challenge',target:name,stake:Number($('stakeSel').value)});
 window.challengeBot=(name,stake)=>send({type:'challenge',target:name,stake});
+window.quickMatch=()=>{ ensureAudio(); send({type:'quickMatch', stake:parseInt($('stakeSel').value,10)}); };
+function copyText(t,msg){ if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(t).then(()=>toast('📋 '+msg)).catch(()=>toast(t)); } else toast(t); }
+window.shareWin=()=>{ const url=location.origin+'/'; const text='⚔️ I just won a duel in Nallystake and took the pot! Come and take my gold: '+url; if(navigator.share){ navigator.share({title:'Nallystake', text}).catch(()=>{}); } else copyText(text,'Win copied — paste it anywhere!'); };
+window.copyInvite=()=>copyText('⚔️ Duel me in Nallystake — free to play against real players: '+location.origin+'/ — I\'m '+(me||'waiting')+' in the arena.','Invite copied — send it to a friend!');
+window.showKnightPop=(name)=>{ window._knightTap=name; const bot=(window._bots||[]).find(b=>b.name===name); const p=(lastPlayers||[]).find(x=>x.username===name); const busy=p&&p.inDuel; $('knightPopName').textContent='⚔️ '+name+(bot?' 🤖':busy?' — mid-fight (challenge queues)':'');
+  $('knightPopBtn').textContent='⚔️ Challenge · 🪙 '+(bot?bot.stake:$('stakeSel').value);
+  $('knightPopBtn').onclick=()=>{ hideKnightPop(); if(bot) challengeBot(name,bot.stake); else challenge(name); };
+  $('knightPop').classList.remove('hidden'); };
+window.hideKnightPop=()=>{ const k=$('knightPop'); if(k) k.classList.add('hidden'); window._knightTap=null; };
 
 function knightSVG(o){
   const c=o.colors;
@@ -901,7 +924,7 @@ function renderSetup(){
   const mine=(myOutfits||[]).find(o=>o.id===(window._outfit||'peasant'))||myOutfits[0];
   if(mine) $('setupStage').innerHTML=knightSVG(mine);
   const net=window._net||0;
-  $('setupMeta').innerHTML='<b>'+esc(me||'')+'</b> · 🪙 <b class="gold">'+(displayedGold==null?50:displayedGold)+'</b> · Net '+(net>=0?'+':'')+net;
+  $('setupMeta').innerHTML='<b>'+esc(me||'')+'</b> · 🪙 <b class="gold">'+(displayedGold==null?50:displayedGold)+'</b> · Net '+(net>=0?'+':'')+net+((window._form||[]).length?'<br><small>Recent form: '+(window._form.map(r=>'<b style="color:'+(r==='W'?'#69f0ae':'#ef9a9a')+'">'+r+'</b>').join(' '))+'</small>':'');
   $('setupStakes').innerHTML=[5,10,25,50,100,250].map(s=>'<button data-stake="'+s+'" class="'+(Number($('stakeSel').value)===s?'on':'')+'" onclick="setupStake('+s+')">'+s+'</button>').join('');
   $('setupArmour').innerHTML=(myOutfits||[]).filter(o=>(window._owned||[]).includes(o.id)).map(o=>'<div class="sa'+(window._outfit===o.id?' eq':'')+'" onclick="setupWear(\''+o.id+'\')">'+knightSVG(o)+'<br>'+esc(o.name)+'</div>').join('');
   const so=$('setupOnline');
@@ -1278,6 +1301,14 @@ function initScene(){
     if(duel&&duel.mine) return; // mid-fight taps are for fighting
     if(!$('setupScreen').classList.contains('hidden')) return;
     const rect=renderer.domElement.getBoundingClientRect();
+    // Tapped a knight? Offer the duel right there (ring knights + the pair fighting).
+    { const nx2=((e.clientX-rect.left)/rect.width)*2-1, ny2=-((e.clientY-rect.top)/rect.height)*2+1;
+      const rcK=new THREE.Raycaster(); rcK.setFromCamera(new THREE.Vector2(nx2,ny2),cam);
+      const cands=[...ringKnights.values()].map(r=>r.g); if(duel){ if(knightA) cands.push(knightA); if(knightB) cands.push(knightB); }
+      const hits=rcK.intersectObjects(cands,true);
+      for(const h of hits){ let o=h.object; while(o&&!(o.userData&&o.userData.playerName)) o=o.parent; if(o&&o.userData.playerName&&o.userData.playerName!==me){ showKnightPop(o.userData.playerName); return; } if(o&&o.userData.playerName===me) break; }
+    }
+    hideKnightPop();
     const nx=((e.clientX-rect.left)/rect.width)*2-1, ny=-((e.clientY-rect.top)/rect.height)*2+1;
     const rc=new THREE.Raycaster(); rc.setFromCamera(new THREE.Vector2(nx,ny),cam);
     const o=rc.ray.origin, d=rc.ray.direction; if(Math.abs(d.y)<.001) return;
@@ -1599,7 +1630,7 @@ function ringSync(){
     // ring slot, and glides to it in the render loop (no snapping).
     const sx=(p.wx!=null)?p.wx:x, sz=(p.wz!=null)?p.wz:z;
     const u=rk.g.userData;
-    u.ringSpot=true; u.ringX=x; u.ringZ=z; u.ringRy=Math.atan2(-sx,-sz);
+    u.ringSpot=true; u.ringX=x; u.ringZ=z; u.ringRy=Math.atan2(-sx,-sz); u.playerName=p.username;
     u.walkTX=(p.wx!=null)?p.wx:null; u.walkTZ=(p.wz!=null)?p.wz:null;
     if(u.lobbyX===0&&u.lobbyZ===-8.6){ u.lobbyX=sx; u.lobbyZ=sz; u.lobbyRy=u.ringRy; } // brand-new knight spawns at their spot
     u.baseX=u.lobbyX; u.fightRy=u.ringRy; u.spotMix=0; u.spotRyMix=0; u.spotAnim=null; u.dispPos=0; u.dispAnim=null;
