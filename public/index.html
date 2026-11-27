@@ -145,6 +145,21 @@ select{background:#0d1330;border-color:#8a6d1473}
 #btnCampBanner{width:100%;margin:0 0 6px;border-color:#8a6d14;font-weight:700}
 #triLine{margin:2px 0 0;text-align:center;font-size:12.5px;color:#ffe9a3}
 #postFight{border:2px solid #8a6d14;border-radius:10px;background:linear-gradient(180deg,#26305a,#121a3a);padding:8px 10px;margin:0 0 8px;box-shadow:0 4px 14px #000a}
+#btnExplore{width:100%;margin:0 0 2px;border-color:#8a6d14;font-weight:700}
+.shop .item{position:relative;overflow:hidden}
+.shop .item .prev{position:relative;border-radius:8px;background:radial-gradient(90% 90% at 50% 20%,#31407a 0%,#131c42 70%)}
+.shop .item .prev::after{content:'';position:absolute;inset:0;background:linear-gradient(115deg,transparent 30%,rgba(255,240,190,.28) 48%,transparent 62%);transform:translateX(-120%);animation:sheen 3.6s ease-in-out infinite}
+@keyframes sheen{0%,55%{transform:translateX(-120%)}85%,100%{transform:translateX(120%)}}
+.shop .item .newtag{position:absolute;top:4px;right:4px;z-index:2;background:linear-gradient(180deg,#e3b93c,#9e7d1c);color:#231a04;font-size:10px;font-weight:800;border-radius:6px;padding:1px 5px}
+.shop .item .petprev{font-size:46px;line-height:1.15;padding:6px 0}
+#setupOnline,#setupScores{width:100%;max-width:430px;margin:0 auto;text-align:left}
+#setupOnline .sorow,#setupScores .sorow{display:flex;justify-content:space-between;gap:8px;padding:3px 8px;font-size:13px;border-bottom:1px solid #8a6d1433}
+#setupScores .sorow b.rk{color:#e3b93c;min-width:20px}
+#rewardOverlay{position:fixed;inset:0;background:rgba(3,6,20,.88);z-index:85;display:flex;align-items:center;justify-content:center;padding:16px}
+#rewardCard{background:linear-gradient(180deg,#26305a,#121a3a);border:2px solid #8a6d14;border-radius:14px;padding:18px;max-width:340px;width:100%;text-align:center;box-shadow:0 10px 34px #000c}
+#rewardCard h2{margin:0 0 8px;font-size:22px}
+#rewardBody{font-size:15px;line-height:1.5;margin:0 0 12px}
+.invrow{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 8px;border:1px solid #8a6d1455;border-radius:10px;margin:0 0 6px;background:linear-gradient(180deg,#1a2450,#0d1330);font-size:13.5px}
 #postFightTitle{margin:0 0 3px;font-size:16px;font-weight:900}
 #postFightLines{margin:0 0 7px;font-size:13px;line-height:1.5;color:#e8ecff}
 #queueBox .qrow{display:flex;gap:7px;align-items:center;justify-content:space-between;border:1px solid #8a6d1466;border-radius:8px;padding:5px 8px;margin:5px 0;font-size:12.5px;background:#141d42}
@@ -266,6 +281,8 @@ select{background:#0d0a05;color:var(--ink);padding:7px;border-radius:8px;border:
           <p style="margin:4px 0 8px;font-size:13.5px;line-height:1.5">Challenge a 🌐 player, or practice vs a 🤖 bot.</p>
           <p class="howline">Win gold 🪙 → buy armour 👕 → stake bigger fights. <b>Net</b> = wins − losses — cool armour needs it.</p>
           <button id="btnCampBanner" onclick="switchTab('campaign')">🏆 Tournament — FREE · win up to 170 gp + 🏆</button>
+          <button id="btnExplore" onclick="exploreBtn()">🗺️ Go Explore — a tunnel, 3 fights, a chest</button>
+          <p id="exploreLine" style="margin:4px 0 6px;font-size:12.5px;color:var(--mut)"></p>
           <div class="row"><button onclick="switchTab('online')">🌐 Players</button><button onclick="switchTab('bots')">🤖 Bots</button></div>
           <div class="adslot" id="adLobby"><div class="adlabel">Advertisement</div><ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-8773554474653193" data-ad-slot="8109311804" data-ad-format="auto" data-full-width-responsive="true"></ins></div>
           <button id="btnAdGold" onclick="openAdGold()">🎁 Free gold — watch an ad</button>
@@ -282,6 +299,7 @@ select{background:#0d0a05;color:var(--ink);padding:7px;border-radius:8px;border:
             <button id="btnDefence"><span class="mi">🛡️</span><span class="ml">Defence</span></button>
           </div>
           <p id="triLine">🗡️ beats 💪 · 💪 beats 🛡️ · 🛡️ beats 🗡️ — counter their last move!</p>
+          <p id="setMoveLine" style="margin:2px 0 0;font-size:12.5px;color:var(--mut)"></p>
           <p id="duelStatus"></p>
         </div>
       </section>
@@ -308,10 +326,25 @@ select{background:#0d0a05;color:var(--ink);padding:7px;border-radius:8px;border:
       </section>
       <section id="panel-shop" class="tabPanel">
         <h3 class="sec">👕 Shop</h3>
-        <p style="margin:2px 0 6px;font-size:12.5px;line-height:1.45">Cool armour needs a <b>net score</b> (wins − losses). Drop below its number and you <b>lose the armour</b> — win it back and rebuy. Your net: <b class="gold" id="shopNetV">+0</b></p>
+        <p style="margin:2px 0 6px;font-size:12.5px;line-height:1.45">Cool armour needs a <b>net score</b> (wins − losses). Drop below its number and you <b>lose the armour</b> — win it back and rebuy. Your net: <b class="gold" id="shopNetV">+0</b><br>Armour and pets are <b>looks only</b> — every fight is pure skill.</p>
         <div class="shop" id="shop"></div>
+        <h3 class="sec" style="margin-top:12px">🐾 Pets — they follow you around the arena</h3>
+        <div class="shop" id="petShop"></div>
         <button id="btnAdGold2" onclick="openAdGold()" style="margin-top:10px;border-color:#8a6d14">🎁 Free gold — watch an ad</button>
         <p id="adGoldLeft2" style="margin:4px 0 0;font-size:12.5px;color:var(--mut)"></p>
+      </section>
+      <section id="panel-pack" class="tabPanel">
+        <h3 class="sec">🎒 Inventory</h3>
+        <div id="invList"></div>
+        <h3 class="sec" style="margin-top:12px">🏦 Bank — <span id="bankGoldV" class="gold">0</span> gp stored</h3>
+        <div class="row">
+          <button onclick="bankGoldBtn('deposit',100)">Deposit 100</button>
+          <button onclick="bankGoldBtn('withdraw',100)">Withdraw 100</button>
+          <button onclick="bankGoldBtn('deposit','all')">Deposit all</button>
+          <button onclick="bankGoldBtn('withdraw','all')">Withdraw all</button>
+        </div>
+        <div id="bankList" style="margin-top:6px"></div>
+        <p style="margin:6px 0 0;font-size:12.5px;color:var(--mut)">Banked gold can't be staked and banked items can't be worn until you withdraw them. Outfits and pets live in the 👕 Shop.</p>
       </section>
       <section id="panel-chat" class="tabPanel">
         <div id="chat"></div>
@@ -324,6 +357,7 @@ select{background:#0d0a05;color:var(--ink);padding:7px;border-radius:8px;border:
       <button data-tab="bots" title="Bots">🤖</button>
       <button data-tab="campaign" title="Tournament">🏆</button>
       <button data-tab="shop" title="Shop">👕</button>
+      <button data-tab="pack" title="Inventory & bank">🎒</button>
       <button data-tab="chat" title="Chat">💬</button>
     </nav>
   </div>
@@ -353,7 +387,18 @@ select{background:#0d0a05;color:var(--ink);padding:7px;border-radius:8px;border:
     <button id="sqTourney"><span class="ci">🏆</span><span class="cl">Tournament</span></button>
     <button id="sqFb"><span class="ci">f</span><span class="cl">Challenge on Facebook</span></button>
   </div>
+  <div class="setupLabel">🌐 Players online now</div>
+  <div id="setupOnline"></div>
+  <div class="setupLabel">🏆 Highscores — most wins in a row</div>
+  <div id="setupScores"></div>
   <button id="setupSkip">Skip — just take me to the lobby</button>
+</div>
+<div id="rewardOverlay" class="hidden">
+  <div id="rewardCard">
+    <h2 id="rewardTitle">🎁</h2>
+    <p id="rewardBody"></p>
+    <button id="rewardOk">Nice!</button>
+  </div>
 </div>
 
 <div id="challengePop">
@@ -425,7 +470,7 @@ const WORD_COLORS={'SLASH!':'#ffb74d','SMASH!':'#ff5252','BLOCKED!':'#64b5f6','C
 function handle(m){
   if(m.type==='authErr'){ $('authErr').textContent=m.message; return; }
   if(m.type==='authOk'){
-    me=m.username; myOutfits=m.outfits; window._bots=m.bots||[];
+    me=m.username; myOutfits=m.outfits; window._bots=m.bots||[]; window._petDefs=m.pets||[]; window._accDefs=m.accessories||[];
     if(m.campaignRounds) myCampaignRounds=m.campaignRounds;
     $('loginScreen').classList.add('hidden'); $('gameScreen').classList.remove('hidden');
     $('meName').textContent='⚔️ '+me; applyState(m); renderShop(); renderPlayers(m.players); initScene();
@@ -438,7 +483,12 @@ function handle(m){
   if(m.type==='state'){ applyState(m); return; }
   if(m.type==='adGoldOk'){ toast('🎁 +'+m.amount+' gp — free gold claimed!'); return; }
   if(m.type==='campaign'){ if(m.campaign) myCampaign=m.campaign; if(typeof m.trophies==='number') myTrophies=m.trophies; renderCampaign(); renderTrophies(); return; }
-  if(m.type==='players'){ lastPlayers=m.players||[]; renderPlayers(m.players); arenaSync(m.duels||[]); renderTicker(m.duels||[]); return; }
+  if(m.type==='players'){ lastPlayers=m.players||[]; renderPlayers(m.players); arenaSync(m.duels||[]); renderTicker(m.duels||[]); if(window._setupVisible && window._setupVisible()) renderSetup(); return; }
+  if(m.type==='chestOpened'){ showReward('🎁 Chest opened!','You found a <b>📜 Reward Scroll</b>!<br>It is in your 🎒 Inventory — open it there to reveal your reward.'); renderInv(); return; }
+  if(m.type==='scrollReward'){ const r=m.reward||{}; let body;
+    if(r.kind==='gold') body='The scroll glows… and turns into <b class="gold">'+r.amount+' gp</b>!'+(r.dupOf?'<br><small>(You already own the '+esc(r.dupOf)+' — it became gold instead.)</small>':'');
+    else body='The scroll glows… and reveals <b>'+esc(r.name||'a prize')+'</b>!<br><small>'+(r.kind==='pet'?'Find it in the 👕 Shop pets to bring it along.':r.kind==='accessory'?'Wear it from your 🎒 Inventory.':'Wear it from the 👕 Shop.')+'</small>';
+    showReward('📜 Reward scroll',body); return; }
   if(m.type==='error'){ toast(m.message); return; }
   if(m.type==='refillOk'){ toast('🏠 The house stakes you 50 gp — win it back! Gold: '+m.gold); return; }
   if(m.type==='challengeSent'){ if(m.queued) myQueues.delete(m.to); toast(m.queued?('⏳ Your queued challenge reached '+m.to+' — offered now!'):('Challenge sent to '+m.to+' for '+m.stake+' gp…')); if(lastPlayers.length) renderPlayers(lastPlayers); return; }
@@ -456,7 +506,7 @@ function handle(m){
   if(m.type==='chat'){ const c=$('chat'); c.innerHTML+='<div><b>'+esc(m.from)+':</b> '+esc(m.text)+'</div>'; c.scrollTop=c.scrollHeight; return; }
   if(m.type==='duelStart'){
     if(activeDuels.has(m.duelId)) return;
-    const info={id:m.duelId,a:m.a,b:m.b,pot:m.pot,stake:m.stake||0,mine:(me===m.a||me===m.b),campaign:!!m.campaign,practice:!!m.practice,round:m.round||0,prize:m.prize||0,colorsA:m.colorsA,colorsB:m.colorsB,hpA:m.hpA,hpB:m.hpB};
+    const info={id:m.duelId,a:m.a,b:m.b,pot:m.pot,stake:m.stake||0,mine:(me===m.a||me===m.b),campaign:!!m.campaign,practice:!!m.practice,explore:m.explore||0,round:m.round||0,prize:m.prize||0,colorsA:m.colorsA,colorsB:m.colorsB,hpA:m.hpA,hpB:m.hpB};
     activeDuels.set(m.duelId,info);
     if(info.mine){ if(stageDuelId&&stageDuelId!==m.duelId) demoteStage(); stageDuel(info,true); }
     else if(!stageDuelId) stageDuel(info,true);
@@ -490,7 +540,8 @@ function handle(m){
     const dmg=Math.max(m.aDmg,m.bDmg);
     addShake(m.glance?.2:(dmg>=6?.55:dmg>0?.32:.16)); // a glancing hit lands smaller
     if(m.word==='BLOCKED!'||m.word==='GUARDED') sndBlock(); else if(m.word==='CLASH!') sndClash(); else sndClang(dmg>=6);
-    document.querySelectorAll('#moves button').forEach(b=>b.classList.remove('locked')); lockedMove=null;
+    // Sticky moves (Derek): your picked move STAYS set — button lit, server
+    // repeats it — until you tap a different one. Nothing clears it here.
     let status=exchangeLine(m);
     if(m.riposte) status+=' ⚔️ Riposte +1!';
     if(m.turtle) status+=' 🐢 Third guard in a row — that block dealt nothing.';
@@ -515,10 +566,11 @@ function handle(m){
       const cnt={}; oppHist.forEach(x=>cnt[x]=(cnt[x]||0)+1);
       const oppFav=Object.keys(cnt).sort((x,y)=>cnt[y]-cnt[x])[0]||null;
       const botDef=(window._bots||[]).find(b=>b.name===oppName);
-      pendingPost={won:iWon,campaign:!!m.campaign,practice:!!m.practice,pot:m.pot||0,prize:m.prize||0,stake:duel.stake||0,trophy:!!m.trophy,dailyBonus:m.dailyBonus||0,target:oppName,myWins:duel.myWins||0,exch:duel.exchCount||0,oppFav,botName:botDef?botDef.name:null,botStake:botDef?botDef.stake:0};
+      pendingPost={won:iWon,campaign:!!m.campaign,practice:!!m.practice,explore:m.explore||0,pot:m.pot||0,prize:m.prize||0,stake:duel.stake||0,trophy:!!m.trophy,dailyBonus:m.dailyBonus||0,target:oppName,myWins:duel.myWins||0,exch:duel.exchCount||0,oppFav,botName:botDef?botDef.name:null,botStake:botDef?botDef.stake:0};
     }
     const wb=$('winnerBanner');
     if(m.practice){ wb.innerHTML='🎓 PRACTICE<br>'+esc(m.winner)+' WINS'; }
+    else if(m.explore){ wb.innerHTML='🗺️ TUNNEL<br>'+esc(m.winner)+' WINS'; }
     else if(m.campaign){ wb.innerHTML='👑 WINNER<br>'+esc(m.winner)+(m.prize?' +'+m.prize+' GP PRIZE':'')+(m.trophy?'<br>🏆 TROPHY!':''); }
     else wb.innerHTML='👑 WINNER<br>'+esc(m.winner)+' +'+m.pot+' GP';
     if(iWon && m.dailyBonus) wb.innerHTML+='<br>☀️ First win of the day +'+m.dailyBonus+' GP';
@@ -530,6 +582,7 @@ function handle(m){
     else sndWin();
     addShake(.25); setCamMode(m.reason==='ko' ? 'duel' : 'winner', m.winner===duel?.a); // on a KO keep both knights in frame so the loser's fall to their knees is seen
     if(m.practice) toast(iWon?'🎓 Practice won — nicely read! Real fights vs Pip pay gold.':'🎓 Practice over — watch his pattern and counter it.',4200);
+    else if(m.explore) toast(iWon?(m.explore>=3?'🗺️ The Guardian falls — a chest waits in the tunnel!':'🗺️ Tunnel fight '+m.explore+' of 3 cleared — delve deeper!'):'🗺️ The tunnel wins this time — your run is over.',4200);
     else if(m.campaign) toast(iWon?('🏆 Round '+(m.round||'')+' cleared! +'+(m.prize||0)+' gp'+(m.trophy?' + TROPHY!':'')):('Campaign run over — '+(m.winner||'')+' took Round '+(m.round||'')+'.'),4200);
     else toast(iWon?'🏆 You won '+m.pot+' gp!':(m.winner+' took the '+m.pot+' gp pot.'),4000);
     // Fade out, reset under the black, fade back in — no sudden snap back to the lobby pose.
@@ -544,12 +597,13 @@ function handle(m){
    can never hit them before initialization.) ---- */
 function stageDuel(info,fresh){
   stageDuelId=info.id;
-  duel={id:info.id,a:info.a,b:info.b,pot:info.pot,stake:info.stake,mine:info.mine,campaign:info.campaign,practice:info.practice,round:info.round,prize:info.prize,myWins:0,exchCount:0,glanceNote:false};
-  lockedMove=null; prevHp={a:info.hpA,b:info.hpB};
+  duel={id:info.id,a:info.a,b:info.b,pot:info.pot,stake:info.stake,mine:info.mine,campaign:info.campaign,practice:info.practice,explore:info.explore||0,round:info.round,prize:info.prize,myWins:0,exchCount:0,glanceNote:false};
+  clearSetMove(); prevHp={a:info.hpA,b:info.hpB};
   lastDuelCampaign=info.campaign; histA=[]; histB=[]; clearHitLabels(); labelStamp=0;
   const pf=$('postFight'); if(pf) pf.classList.add('hidden');
   const cl=$('duelCampaignLine');
   if(info.campaign){ cl.textContent='🏆 Campaign Round '+info.round+' — '+(me===info.a?info.b:info.a)+' · Prize '+info.prize+' gp'; cl.classList.remove('hidden'); }
+  else if(info.explore){ cl.textContent='🗺️ Tunnel fight '+info.explore+' of 3 — '+(me===info.a?info.b:info.a)+' · a chest waits behind the Guardian'; cl.classList.remove('hidden'); }
   else if(info.practice){ cl.textContent='🎓 Practice duel — no gold on the line. Learn the moves!'; cl.classList.remove('hidden'); }
   else cl.classList.add('hidden');
   switchTab('fight');
@@ -559,8 +613,8 @@ function stageDuel(info,fresh){
   $('btnForfeit').classList.toggle('hidden',!duel.mine);
   $('hpALabel').textContent=info.a; $('hpBLabel').textContent=info.b; $('ovNameA').textContent=info.a; $('ovNameB').textContent=info.b;
   setHp(info.hpA,info.hpB,true); $('winnerBanner').style.display='none'; $('winnerBanner').classList.remove('show'); $('wordBanner').textContent='';
-  if(knightA){ knightA.visible=true; setKnightColors(knightA,info.colorsA); }
-  if(knightB){ knightB.visible=true; setKnightColors(knightB,info.colorsB); }
+  if(knightA){ knightA.visible=true; setKnightColors(knightA,info.colorsA); setHat(knightA,accFor(info.a)); }
+  if(knightB){ knightB.visible=true; setKnightColors(knightB,info.colorsB); setHat(knightB,accFor(info.b)); }
   plateNameA=info.a; plateNameB=info.b; refreshNameplates();
   resetKnightPose();
   if(fresh){
@@ -572,6 +626,7 @@ function stageDuel(info,fresh){
     [knightA,knightB].forEach(k=>{ if(k){ k.userData.spotMix=1; k.userData.spotRyMix=1; k.userData.spotAnim=null; } });
   }
   $('duelStatus').textContent = info.practice ? "🎓 Practice — watch Pip's move, then counter it! Your first picks take as long as you need."
+    : info.explore ? ('🗺️ Tunnel fight '+info.explore+' of 3 — beat '+(me===info.a?info.b:info.a)+' to delve deeper!')
     : info.campaign ? ('🏆 Round '+info.round+' — win the '+info.prize+' gp prize! Pick your move!')
     : info.mine ? ('Pot: '+info.pot+' gp — pick your move!')
     : ('📺 Watching '+info.a+' vs '+info.b+' — '+info.pot+' gp pot');
@@ -603,8 +658,10 @@ function practiceCoach(m){
 }
 function showPostFight(pf){
   const el=$('postFight'); if(!el) return;
+  $('btnRematch').textContent='🔁 Rematch'; $('btnPickOpp').textContent='Pick opponent';
   let title; const lines=[];
   if(pf.practice){ title=pf.won?'🎓 Practice won!':'🎓 Practice over'; lines.push('No gold on the line — that was the lesson. Real fights vs Pip pay 5 gp a win.'); }
+  else if(pf.explore){ const ex=window._explore||{step:0,done:false}; title=pf.won?('🗺️ Tunnel fight '+pf.explore+' of 3 cleared!'):'🗺️ Tunnel run over'; if(pf.won&&ex.done) lines.push('🎁 A chest waits in the tunnel — open it from the Fight tab!'); else if(pf.won) lines.push('Deeper you go — '+(3-(ex.step||1)+1)+' fights between you and the chest.'); else lines.push('The tunnel resets. Go Explore to try again.'); $('btnRematch').textContent=pf.won?(ex.done?'🎁 Open the chest':'▶ Next tunnel fight'):'🔁 Rematch'; }
   else if(pf.campaign){ title=pf.won?('🏆 Round cleared! +'+pf.prize+' gp'):('🏆 Run over — '+pf.target+' took it'); if(pf.trophy) lines.push('🏆 TROPHY won!'); }
   else if(pf.won){ title='🏆 You won! +'+pf.pot+' gp'; }
   else { title='💀 You lost — '+pf.stake+' gp'; }
@@ -615,14 +672,15 @@ function showPostFight(pf){
   $('postFightLines').innerHTML=lines.map(esc).join('<br>');
   el.classList.remove('hidden');
   $('btnRematch').onclick=()=>{ ensureAudio(); el.classList.add('hidden'); rematch(pf); };
-  $('btnPickOpp').onclick=()=>{ el.classList.add('hidden'); switchTab(pf.campaign?'campaign':'bots'); };
+  $('btnPickOpp').onclick=()=>{ el.classList.add('hidden'); switchTab(pf.campaign?'campaign':pf.explore?'fight':'bots'); };
 }
 function rematch(pf){
+  if(pf.explore){ const ex=window._explore||{step:0,done:false}; if(pf.won&&ex.done){ send({type:'exploreChest'}); return; } if(pf.won){ send({type:'exploreFight'}); return; } send({type:'exploreStart'}); setTimeout(()=>send({type:'exploreFight'}),250); return; }
   if(pf.campaign){ send({type:'campaignFight'}); return; }
   if(pf.botName){ challengeBot(pf.botName,pf.botStake); return; }
   $('stakeSel').value=String(pf.stake||10); challenge(pf.target);
 }
-function endDuelUI(){ const wasCampaign=lastDuelCampaign; duel=null; stageDuelId=null; lastDuelCampaign=false; resetKnightPose(); if(knightA) knightA.visible=false; if(knightB) knightB.visible=false; $('duelPanel').classList.add('hidden'); $('duelCampaignLine').classList.add('hidden'); $('lobbyContent').classList.remove('hidden'); $('panel-fight').classList.remove('dueling'); $('hpOverlay').classList.add('hidden'); $('btnForfeit').classList.add('hidden'); $('countdown').textContent=''; hideCrown(); setCamMode('lobby'); plateNameA=null; plateNameB=null; refreshNameplates(); clearHitLabels(); arenaSync(); promoteNext(); if(pendingPost){ showPostFight(pendingPost); pendingPost=null; } if(wasCampaign) switchTab('campaign'); }
+function endDuelUI(){ const wasCampaign=lastDuelCampaign; duel=null; stageDuelId=null; lastDuelCampaign=false; clearSetMove(); resetKnightPose(); if(knightA) knightA.visible=false; if(knightB) knightB.visible=false; $('duelPanel').classList.add('hidden'); $('duelCampaignLine').classList.add('hidden'); $('lobbyContent').classList.remove('hidden'); $('panel-fight').classList.remove('dueling'); $('hpOverlay').classList.add('hidden'); $('btnForfeit').classList.add('hidden'); $('countdown').textContent=''; hideCrown(); setCamMode('lobby'); plateNameA=null; plateNameB=null; refreshNameplates(); clearHitLabels(); arenaSync(); promoteNext(); if(pendingPost){ showPostFight(pendingPost); pendingPost=null; } if(wasCampaign) switchTab('campaign'); }
 function renderTrophies(){ $('meTrophyN').textContent=myTrophies; $('meTrophies').classList.toggle('hidden',!(myTrophies>0)); }
 function coinPileSVG(g){ // a gold pile you can SEE grow with the amount
   const coin=(x,y,s)=>'<ellipse cx="'+x+'" cy="'+y+'" rx="'+(6*s)+'" ry="'+(2.6*s)+'" fill="#f7dd7a" stroke="#c9a227" stroke-width="1"/>';
@@ -670,10 +728,17 @@ function applyState(m){
   if(m.adClaimsLeft!=null){ adClaimsLeftNow=m.adClaimsLeft; adGoldLabels(); }
   if(m.adBreakPending) adBreakWanted=true;
   if(typeof m.campaignBest==='number') myCampaignBest=m.campaignBest;
+  if(m.scores) window._scores=m.scores;
+  if(typeof m.streak==='number') window._streak=m.streak;
+  if(typeof m.bankGold==='number'||m.bankItems){ window._bank={gold:m.bankGold||0,items:m.bankItems||[]}; }
+  if(m.petsOwned||'pet' in m){ window._myPets={owned:m.petsOwned||[],pet:m.pet||null}; }
+  if(m.accOwned||'accessory' in m){ window._myAcc={owned:m.accOwned||[],accessory:m.accessory||null}; }
+  if(typeof m.scrolls==='number') window._scrolls=m.scrolls;
+  if(typeof m.exploreStep==='number'||typeof m.exploreDone==='boolean') window._explore={step:m.exploreStep||0,done:!!m.exploreDone};
   if(m.queuedOut){ myQueues=new Map(m.queuedOut.map(q=>[q.target,q.stake])); renderQueueBox(); }
   const prevOutfit=window._outfit, prevOwned=window._owned;
   animateGold(m.gold);
-  $('meRecord').textContent=m.wins+'W – '+m.losses+'L';
+  $('meRecord').textContent=m.wins+'W – '+m.losses+'L'+((window._streak||0)>=2?' · 🔥'+window._streak+' in a row':'');
   const net=m.wins-m.losses; window._net=net;
   $('meNet').textContent='Net '+(net>=0?'+':'')+net;
   const snv=$('shopNetV'); if(snv) snv.textContent=(net>=0?'+':'')+net;
@@ -682,7 +747,7 @@ function applyState(m){
     const lost=(myOutfits||[]).find(o=>o.id===prevOutfit);
     toast('💔 Your '+(lost?lost.name:'armour')+' is gone — your net score dropped below its number. Win it back and rebuy it!',4200);
   }
-  if(m.campaign) myCampaign=m.campaign; if(typeof m.trophies==='number') myTrophies=m.trophies; renderTrophies(); renderCampaign(); renderShop();
+  if(m.campaign) myCampaign=m.campaign; if(typeof m.trophies==='number') myTrophies=m.trophies; renderTrophies(); renderCampaign(); renderShop(); renderPets(); renderInv(); renderExplore();
   if(window._setupVisible && window._setupVisible()) renderSetup();
 }
 function renderCampaign(){
@@ -762,15 +827,75 @@ function knightSVG(o){
   +'<rect x="33" y="88" width="12" height="6" rx="2" fill="#3a2a16"/><rect x="48" y="88" width="12" height="6" rx="2" fill="#3a2a16"/>' // boots
   +'</svg>';
 }
+const NEW_OUTFITS=['crimson','forest','ocean','royal','frost'];
 function renderShop(){
   if(!myOutfits.length) return;
   $('shop').innerHTML=myOutfits.map(o=>{
-    const owned=(window._owned||[]).includes(o.id), eq=window._outfit===o.id;
+    const owned=(window._owned||[]).includes(o.id), eq=window._outfit===o.id, banked=(window._bank&&window._bank.items||[]).includes(o.id);
     const net=window._net||0, need=o.net||0, netLine=need?('<br><small>'+(owned||net>=need?('🏆 Net +'+need+' ✓'):('🔒 Needs net +'+need+' · you’re at '+(net>=0?'+':'')+net))+'</small>'):'';
-    const goldLine=(!owned&&(displayedGold||0)<o.price)?('<br><small>🪙 Need '+(o.price-(displayedGold||0))+' more gp</small>'):'';
-    return '<div class="item'+(eq?' eq':'')+'"><div class="prev">'+knightSVG(o)+'</div><b>'+esc(o.name)+'</b>'+netLine+goldLine+'<br>'+(eq?'✅ Equipped':owned?'<button onclick="equip(\''+o.id+'\')">Wear</button>':'<button onclick="buy(\''+o.id+'\')">🪙 '+o.price+'</button>')+'</div>';
+    const goldLine=(!owned&&!o.clue&&(displayedGold||0)<o.price)?('<br><small>🪙 Need '+(o.price-(displayedGold||0))+' more gp</small>'):'';
+    const tag=NEW_OUTFITS.includes(o.id)?'<span class="newtag">✨ NEW</span>':o.clue?'<span class="newtag">🎁 SCROLL</span>':'';
+    const action=eq?'✅ Equipped':banked?'🏦 In your bank':owned?'<button onclick="equip(\''+o.id+'\')">Wear</button>':o.clue?'<small>Only in a 📜 reward scroll</small>':'<button onclick="buy(\''+o.id+'\')">🪙 '+o.price+'</button>';
+    return '<div class="item'+(eq?' eq':'')+'">'+tag+'<div class="prev">'+knightSVG(o)+'</div><b>'+esc(o.name)+'</b>'+netLine+goldLine+'<br>'+action+'</div>';
   }).join('');
 }
+const PET_EMOJI={pup:'🐶',cat:'🐱',parrot:'🦜',fox:'🦊',dragon:'🐉'};
+function renderPets(){
+  const el=$('petShop'); if(!el) return;
+  const defs=window._petDefs||[], mine=window._myPets||{owned:[],pet:null};
+  el.innerHTML=defs.map(p=>{
+    const owned=mine.owned.includes(p.id), active=mine.pet===p.id, banked=(window._bank&&window._bank.items||[]).includes(p.id);
+    const action=active?'✅ Following you':banked?'🏦 In your bank':owned?'<button onclick="equipPet(\''+p.id+'\')">Bring along</button>':p.clue?'<small>Only in a 📜 reward scroll</small>':'<button onclick="buyPet(\''+p.id+'\')">🪙 '+p.price+'</button>';
+    return '<div class="item'+(active?' eq':'')+'"><div class="prev petprev">'+(PET_EMOJI[p.id]||'🐾')+'</div><b>'+esc(p.name)+'</b><br><small>'+esc(p.blurb||'')+'</small><br>'+action+'</div>';
+  }).join('')+(mine.pet?'<div class="item"><div class="prev petprev">🚫</div><b>No pet</b><br><small>Adventure alone.</small><br><button onclick="equipPet(\'\')">Leave pet home</button></div>':'');
+}
+window.buyPet=id=>send({type:'buyPet',petId:id});
+window.equipPet=id=>send({type:'equipPet',petId:id||null});
+function itemName(id){
+  const o=(myOutfits||[]).find(x=>x.id===id); if(o) return o.name;
+  const p=(window._petDefs||[]).find(x=>x.id===id); if(p) return p.name;
+  const a=(window._accDefs||[]).find(x=>x.id===id); if(a) return a.name;
+  return id;
+}
+function renderInv(){
+  const el=$('invList'); if(!el) return;
+  const rows=[];
+  const sc=window._scrolls||0;
+  if(sc>0) rows.push('<div class="invrow"><span>📜 <b>Reward Scroll</b> × '+sc+'<br><small>From the tunnel chest. Open it to reveal a prize!</small></span><button onclick="openScroll()">📜 Open</button></div>');
+  const acc=window._myAcc||{owned:[],accessory:null};
+  const banked=window._bank?window._bank.items:[];
+  acc.owned.forEach(id=>{
+    const a=(window._accDefs||[]).find(x=>x.id===id); if(!a) return;
+    const worn=acc.accessory===id, inBank=banked.includes(id);
+    rows.push('<div class="invrow"><span><span class="swatch" style="background:'+a.color+'"></span><b>'+esc(a.name)+'</b>'+(inBank?' · 🏦 in bank':'')+'</span>'+(worn?'✅ Worn':inBank?'':'<span><button onclick="equipAcc(\''+id+'\')">Wear</button> <button onclick="bankItemBtn(\'deposit\',\''+id+'\')">🏦 Bank</button></span>')+'</div>');
+  });
+  if(acc.accessory) rows.push('<div class="invrow"><span>Take off your hat</span><button onclick="equipAcc(\'\')">Remove</button></div>');
+  if(!rows.length) rows.push('<p style="margin:4px 0;font-size:13px;color:var(--mut)">Nothing here yet. Clear the 🗺️ tunnel (Fight tab → Go Explore) to earn a 📜 reward scroll — scrolls hold gold, party hats, rare pets and armour nobody can buy.</p>');
+  el.innerHTML=rows.join('');
+  const bv=$('bankGoldV'); if(bv) bv.textContent=window._bank?window._bank.gold:0;
+  const bl=$('bankList'); if(!bl) return;
+  const inBank=window._bank?window._bank.items:[];
+  const onYou=[...new Set([...(window._owned||[]),...(window._myPets?window._myPets.owned:[]),...(window._myAcc?window._myAcc.owned:[])])].filter(id=>!inBank.includes(id)&&id!=='peasant'&&window._outfit!==id&&(window._myPets&&window._myPets.pet)!==id&&(window._myAcc&&window._myAcc.accessory)!==id);
+  bl.innerHTML=(inBank.length?inBank.map(id=>'<div class="invrow"><span>🏦 <b>'+esc(itemName(id))+'</b></span><button onclick="bankItemBtn(\'withdraw\',\''+id+'\')">Withdraw</button></div>').join(''):'<p style="margin:4px 0;font-size:13px;color:var(--mut)">Your bank is empty.</p>')
+    +(onYou.length?('<p style="margin:8px 0 4px;font-size:12.5px;color:var(--mut)">On you — tap to store:</p>'+onYou.map(id=>'<div class="invrow"><span><b>'+esc(itemName(id))+'</b></span><button onclick="bankItemBtn(\'deposit\',\''+id+'\')">🏦 Deposit</button></div>').join('')):'');
+}
+window.openScroll=()=>send({type:'openScroll'});
+window.equipAcc=id=>send({type:'equipAccessory',accId:id||null});
+window.bankItemBtn=(action,id)=>send({type:'bankItem',action,itemId:id});
+window.bankGoldBtn=(action,amt)=>{ let a=amt; if(amt==='all'){ a=action==='deposit'?(displayedGold||0):(window._bank?window._bank.gold:0); } if(!a||a<=0){ toast(action==='deposit'?'No gold on you to deposit.':'Your bank is empty.'); return; } send({type:'bankGold',action,amount:a}); };
+function showReward(title,body){ $('rewardTitle').textContent=title; $('rewardBody').innerHTML=body; $('rewardOverlay').classList.remove('hidden'); }
+$('rewardOk').onclick=()=>$('rewardOverlay').classList.add('hidden');
+const EXPLORE_NAMES=['','Tunnel Rat','Cave Goblin','Tunnel Guardian'];
+function renderExplore(){
+  const btn=$('btnExplore'), line=$('exploreLine'); if(!btn||!line) return;
+  const ex=window._explore||{step:0,done:false};
+  if(ex.done){ btn.textContent='🎁 Open the chest!'; line.textContent='You beat all 3 tunnel fights — the chest is yours.'; return; }
+  if(ex.step>0){ btn.textContent='⚔️ Tunnel fight '+ex.step+' of 3 — '+EXPLORE_NAMES[ex.step]; line.innerHTML='You are in the tunnel. Win to delve deeper — lose and the run ends. <a href="#" onclick="exploreLeave();return false" style="color:var(--mut)">Leave tunnel</a>'; return; }
+  btn.textContent='🗺️ Go Explore — a tunnel, 3 fights, a chest';
+  line.textContent='Beat the Rat, the Goblin and the Guardian to open the chest: a 📜 reward scroll (gold, party hats, rare pets, armour nobody can buy).';
+}
+window.exploreBtn=()=>{ ensureAudio(); const ex=window._explore||{step:0,done:false}; if(ex.done){ send({type:'exploreChest'}); return; } if(ex.step>0){ send({type:'exploreFight'}); return; } send({type:'exploreStart'}); setTimeout(()=>send({type:'exploreFight'}),250); };
+window.exploreLeave=()=>send({type:'exploreAbandon'});
 // ---------- Set up your fight (first screen after login) ----------
 function renderSetup(){
   const mine=(myOutfits||[]).find(o=>o.id===(window._outfit||'peasant'))||myOutfits[0];
@@ -779,6 +904,14 @@ function renderSetup(){
   $('setupMeta').innerHTML='<b>'+esc(me||'')+'</b> · 🪙 <b class="gold">'+(displayedGold==null?50:displayedGold)+'</b> · Net '+(net>=0?'+':'')+net;
   $('setupStakes').innerHTML=[5,10,25,50,100,250].map(s=>'<button data-stake="'+s+'" class="'+(Number($('stakeSel').value)===s?'on':'')+'" onclick="setupStake('+s+')">'+s+'</button>').join('');
   $('setupArmour').innerHTML=(myOutfits||[]).filter(o=>(window._owned||[]).includes(o.id)).map(o=>'<div class="sa'+(window._outfit===o.id?' eq':'')+'" onclick="setupWear(\''+o.id+'\')">'+knightSVG(o)+'<br>'+esc(o.name)+'</div>').join('');
+  const so=$('setupOnline');
+  if(so){ const humans=(lastPlayers||[]).filter(p=>!p.isBot);
+    so.innerHTML=humans.length?humans.map(p=>'<div class="sorow"><span>'+(p.inDuel?'⚔️':'🟢')+' <b>'+esc(p.username)+'</b>'+(p.username===me?' (you)':'')+'</span><span>'+(p.inDuel?('fighting '+esc(p.vs||'')):'in the arena')+'</span></div>').join(''):'<div class="sorow"><span>Just you so far</span></div>';
+  }
+  const ss=$('setupScores');
+  if(ss){ const sc=window._scores||[];
+    ss.innerHTML=sc.length?sc.map((s,i)=>'<div class="sorow"><span><b class="rk">'+(i+1)+'.</b> <b>'+esc(s.name)+'</b>'+(s.streak>=2?' 🔥'+s.streak:'')+'</span><span>🔥 best <b>'+s.best+'</b> · '+s.fights+' fights · '+s.wins+'W-'+s.losses+'L</span></div>').join(''):'<div class="sorow"><span>No fights yet — be the first legend.</span></div>';
+  }
 }
 window.setupStake=s=>{ $('stakeSel').value=String(s); document.querySelectorAll('#setupStakes button').forEach(b=>b.classList.toggle('on',Number(b.dataset.stake)===s)); sndClick(); };
 window.setupWear=id=>{ send({type:'equip',outfitId:id}); };
@@ -805,7 +938,8 @@ $('btnRefill').onclick=()=>send({type:'refill'});
 $('btnForfeit').onclick=()=>send({type:'forfeit'});
 $('btnChat').onclick=()=>{ const t=$('chatIn').value.trim(); if(t){ send({type:'chat',text:t}); $('chatIn').value=''; } };
 $('chatIn').addEventListener('keydown',e=>{ if(e.key==='Enter') $('btnChat').click(); });
-function lockMove(mv,btn){ if(!duel||!duel.mine) return; ensureAudio(); sndClick(); lockedMove=mv; send({type:'duelMove',move:mv}); document.querySelectorAll('#moves button').forEach(b=>b.classList.remove('locked')); btn.classList.add('locked'); }
+function lockMove(mv,btn){ if(!duel||!duel.mine) return; ensureAudio(); sndClick(); lockedMove=mv; send({type:'duelMove',move:mv}); document.querySelectorAll('#moves button').forEach(b=>b.classList.remove('locked')); btn.classList.add('locked'); const sl=$('setMoveLine'); if(sl) sl.textContent='Set: '+(MOVE_META[mv].icon)+' '+MOVE_META[mv].label+' — stays until you switch.'; }
+function clearSetMove(){ lockedMove=null; document.querySelectorAll('#moves button').forEach(b=>b.classList.remove('locked')); const sl=$('setMoveLine'); if(sl) sl.textContent=''; }
 $('btnAttack').onclick=e=>lockMove('attack',e.currentTarget);
 $('btnStrength').onclick=e=>lockMove('strength',e.currentTarget);
 $('btnDefence').onclick=e=>lockMove('defence',e.currentTarget);
@@ -1133,6 +1267,26 @@ function initScene(){
   const scene=new THREE.Scene(); scene3=scene; scene.background=skyTex(); scene.fog=new THREE.Fog(0x0d1e52,20,46);
   const cam=new THREE.PerspectiveCamera(50,el.clientWidth/Math.max(el.clientHeight,1),0.1,120); camera3=cam; cam.position.set(0,4.6,9.6); cam.lookAt(0,1.25,0);
   const renderer=new THREE.WebGLRenderer({antialias:true}); renderer3=renderer; renderer.setPixelRatio(Math.min(devicePixelRatio,1.75)); renderer.setSize(el.clientWidth,el.clientHeight); renderer.shadowMap.enabled=true; renderer.shadowMap.type=THREE.PCFSoftShadowMap; renderer.toneMapping=THREE.ACESFilmicToneMapping; renderer.toneMappingExposure=1.12; el.appendChild(renderer.domElement);
+  // Tap-to-walk (lobby only): a short, still tap on the ground walks your
+  // knight there. Drags and pinches (camera) never trigger it.
+  let tapDown=null;
+  renderer.domElement.addEventListener('pointerdown',e=>{ if(tapDown){ tapDown=null; return; } tapDown={x:e.clientX,y:e.clientY,id:e.pointerId}; }); // a second finger (pinch) cancels the tap
+  renderer.domElement.addEventListener('pointerup',e=>{
+    if(!tapDown||e.pointerId!==tapDown.id) return;
+    const moved=Math.hypot(e.clientX-tapDown.x,e.clientY-tapDown.y); tapDown=null;
+    if(moved>10) return; // a drag is a camera move, not a tap — no time limit: slow phones process the two halves frames apart
+    if(duel&&duel.mine) return; // mid-fight taps are for fighting
+    if(!$('setupScreen').classList.contains('hidden')) return;
+    const rect=renderer.domElement.getBoundingClientRect();
+    const nx=((e.clientX-rect.left)/rect.width)*2-1, ny=-((e.clientY-rect.top)/rect.height)*2+1;
+    const rc=new THREE.Raycaster(); rc.setFromCamera(new THREE.Vector2(nx,ny),cam);
+    const o=rc.ray.origin, d=rc.ray.direction; if(Math.abs(d.y)<.001) return;
+    const s=-o.y/d.y; if(s<0) return;
+    let x=o.x+d.x*s, z=o.z+d.z*s;
+    let r=Math.hypot(x,z); if(r<.001){ x=0; z=10.2; r=10.2; }
+    const rr=Math.min(10.6,Math.max(4.9,r)); x=x/r*rr; z=z/r*rr;
+    send({type:'walkTo',x:Math.round(x*100)/100,z:Math.round(z*100)/100});
+  });
   window._resizeScene=()=>{ const w=el.clientWidth,h=el.clientHeight; if(!w||!h) return; renderer.setSize(w,h); cam.aspect=w/h; cam.updateProjectionMatrix(); };
   window.addEventListener('resize',window._resizeScene);
   // pinch zoom (Derek, 2026-11-26): two fingers on the arena zoom the camera in/out; mouse wheel too
@@ -1256,6 +1410,9 @@ function initScene(){
       let walking=false;
       if(u.dispAnim){ const da=u.dispAnim; const p=Math.min(1,(performance.now()-da.start)/da.durMs); const e=da.kind==='walk' ? p : 1-Math.pow(1-p,3); u.dispPos=da.from+(da.to-da.from)*e; walking=(da.kind==='walk'&&p<1); if(walking) u.walkPhase+=dt*11+.35; if(p>=1){ u.dispPos=da.to; u.dispAnim=null; } }
       if(spotStep(u,dt)){ walking=true; u.walkPhase+=dt*(u.strideRate||11)+(u.strideTick||.35); }
+      // --- tap-to-walk glide: a ring knight strolls to its tapped spot (or
+      // back to its ring slot), legs stepping, then turns to face the pit ---
+      if(u.ringSpot && u.spotMix===0){ const tx=u.walkTX!=null?u.walkTX:u.ringX, tz=u.walkTZ!=null?u.walkTZ:u.ringZ; if(tx!=null){ const dx=tx-u.lobbyX, dz=tz-u.lobbyZ, dist=Math.hypot(dx,dz); if(dist>.06){ const st=Math.min(dist,2.3*dt); u.lobbyX+=dx/dist*st; u.lobbyZ+=dz/dist*st; walking=true; u.walkPhase+=dt*11+.35; u.lobbyRy=Math.atan2(dx,dz); } else if(u.lobbyRy!==u.ringRy){ u.lobbyRy=u.ringRy; } } }
       const bobY=(Math.abs(Math.sin(t*2.4+idx*1.7))*.05*(an.swing?.35:1)+(walking?Math.abs(Math.sin(u.walkPhase))*(u.bobAmp||.07):0))*(1-deathE);
       u.shR.rotation.set(_pose.shX,0,_pose.shZ); u.elR.rotation.x=_pose.elX; u.wrR.rotation.x=_pose.wrX;
       u.shL.rotation.x=-.4-_pose.shield*.85; u.elL.rotation.x=-.55-_pose.shield*.3;
@@ -1289,6 +1446,21 @@ function initScene(){
     if(emberPts){ const pos=emberPts.geometry.attributes.position; for(let i=0;i<pos.count;i++){ let y=pos.getY(i)+dt*(.35+((i*37)%10)/22); if(y>4.4) y=.3; pos.setY(i,y); pos.setX(i,pos.getX(i)+Math.sin(t*1.3+i)*dt*.3); } pos.needsUpdate=true; }
     if(dustPts){ const pos=dustPts.geometry.attributes.position; for(let i=0;i<pos.count;i++){ let y=pos.getY(i)+dt*.14; if(y>5.2) y=.25; pos.setY(i,y); pos.setX(i,pos.getX(i)+Math.sin(t*.7+i)*dt*.12); } pos.needsUpdate=true; }
     if(sparks&&sparks.life>0){ sparks.life-=dt/.55; const pos=sparks.pts.geometry.attributes.position; for(let i=0;i<sparks.vel.length;i++){ const v=sparks.vel[i]; v.y-=dt*5.5; pos.setXYZ(i,pos.getX(i)+v.x*dt,pos.getY(i)+v.y*dt,pos.getZ(i)+v.z*dt); } pos.needsUpdate=true; sparks.pts.material.opacity=Math.max(0,sparks.life); if(sparks.life<=0) sparks.pts.visible=false; }
+    // --- pets trot beside their owners: pit edge during a fight, heel in the lobby ---
+    petMap.forEach((entry,name)=>{
+      let tx=null, tz=null, faceRy=null;
+      if(duel && stageDuelId && (duel.a===name||duel.b===name)){
+        const sideA=duel.a===name; tx=sideA?-3.2:3.2; tz=2.4; faceRy=Math.atan2(-tx,-tz);
+      } else {
+        const rk=ringKnights.get(name);
+        if(rk && rk.g.visible){ const kp=rk.g.position, ry=rk.g.rotation.y; const lx=.95, lz=-.85; tx=kp.x+lx*Math.cos(ry)+lz*Math.sin(ry); tz=kp.z-lx*Math.sin(ry)+lz*Math.cos(ry); faceRy=ry; }
+      }
+      if(tx===null){ entry.g.visible=false; return; }
+      entry.g.visible=true;
+      const dx=tx-entry.g.position.x, dz=tz-entry.g.position.z, dist=Math.hypot(dx,dz);
+      if(dist>.08){ const st=Math.min(dist,3.4*dt); entry.g.position.x+=dx/dist*st; entry.g.position.z+=dz/dist*st; entry.g.position.y=Math.abs(Math.sin(t*9+entry.phase))*.06; entry.g.rotation.y=Math.atan2(dx,dz); }
+      else { entry.g.position.y=0; if(faceRy!=null) entry.g.rotation.y=faceRy; }
+    });
     if(crown&&crown.visible&&crownDrop>=0){ crownDrop+=dt/.7; const p=Math.min(crownDrop,1); const bounce=p<.7? (1-p/.7)*-1.6 : -Math.abs(Math.sin((p-.7)/.3*Math.PI))*.22*(1-p); crown.position.y=3.05+bounce; crown.rotation.y+=dt*2.4; if(p>=1) crownDrop=-1; }
     else if(crown&&crown.visible){ crown.rotation.y+=dt*.8; crown.position.y=3.05+Math.sin(t*2)*.05; }
     // camera: modes + shake
@@ -1362,6 +1534,7 @@ function allKnights(){ const arr=[knightA,knightB]; minis.forEach(mn=>{ arr.push
 function arenaSync(duelsList){
   if(duelsList){ lastDuels=duelsList; reconcileDuels(); }
   ringSync();
+  petSync();
 }
 /* The server's players broadcast carries EVERY running duel. A player who
    joins (or refreshes) mid-fight never got those duelStart messages — so
@@ -1374,7 +1547,7 @@ function reconcileDuels(){
   for(const d of (lastDuels||[])){
     if(activeDuels.has(d.duelId)) continue;
     const pa=lastPlayers.find(p=>p.username===d.a), pb=lastPlayers.find(p=>p.username===d.b);
-    const info={id:d.duelId,a:d.a,b:d.b,pot:(d.campaign||d.practice)?0:(d.stake||0)*2,stake:d.stake||0,mine:(me===d.a||me===d.b),campaign:!!d.campaign,practice:!!d.practice,round:d.round||0,prize:d.campaign?((myCampaignRounds[(d.round||1)-1]||{}).prize||0):0,colorsA:pa?pa.colors:null,colorsB:pb?pb.colors:null,hpA:d.hpA,hpB:d.hpB};
+    const info={id:d.duelId,a:d.a,b:d.b,pot:(d.campaign||d.practice||d.explore)?0:(d.stake||0)*2,stake:d.stake||0,mine:(me===d.a||me===d.b),campaign:!!d.campaign,practice:!!d.practice,explore:d.explore||0,round:d.round||0,prize:d.campaign?((myCampaignRounds[(d.round||1)-1]||{}).prize||0):0,colorsA:pa?pa.colors:null,colorsB:pb?pb.colors:null,hpA:d.hpA,hpB:d.hpB};
     activeDuels.set(d.duelId,info);
     if(info.mine){ if(stageDuelId) demoteStage(); stageDuel(info,false); }
     else if(!stageDuelId) stageDuel(info,false);
@@ -1394,7 +1567,7 @@ function renderTicker(duelsList){
   if(!lastPlayers.length){ el.textContent=''; return; }
   const fighting=new Set();
   (lastDuels||[]).forEach(d=>{ fighting.add(d.a); fighting.add(d.b); });
-  const parts=(lastDuels||[]).map(d=> d.campaign?('🏆 '+d.a+' vs '+d.b+' · Tournament R'+d.round) : d.practice?('🎓 '+d.a+' vs '+d.b+' · practice') : ('⚔️ '+d.a+' vs '+d.b+' · '+d.stake+' gp'));
+  const parts=(lastDuels||[]).map(d=> d.campaign?('🏆 '+d.a+' vs '+d.b+' · Tournament R'+d.round) : d.explore?('🗺️ '+d.a+' vs '+d.b+' · tunnel '+d.explore+'/3') : d.practice?('🎓 '+d.a+' vs '+d.b+' · practice') : ('⚔️ '+d.a+' vs '+d.b+' · '+d.stake+' gp'));
   const waiting=lastPlayers.filter(p=>!fighting.has(p.username)).length;
   el.textContent=(parts.length?parts.join('  ·  ')+'  ·  ':'')+waiting+' waiting in the arena';
 }
@@ -1416,16 +1589,92 @@ function ringSync(){
     }
     if(p.colors) setKnightColors(rk.g,p.colors);
     setPlate(rk.plate, p.username+(p.trophies?' 🏆'+p.trophies:''));
+    setHat(rk.g, p.accessory||null);
     rk.g.visible=true;
     const n=waiting.length;
     const gap=1.9; // the ring wraps around, but the camera's own sector stays empty — nobody stands on the lens
     const th=n<=1 ? Math.PI*1.5 : (Math.PI/2 + gap/2) + i*((Math.PI*2-gap)/(n-1));
-    const x=Math.cos(th)*8.6, z=Math.sin(th)*8.6, ry=Math.atan2(-x,-z);
-    const u=rk.g.userData; u.baseX=x; u.lobbyX=x; u.lobbyZ=z; u.lobbyRy=ry; u.fightRy=ry; u.spotMix=0; u.spotRyMix=0; u.spotAnim=null; u.dispPos=0; u.dispAnim=null;
-    rk.g.position.set(x,0,z); rk.g.rotation.y=ry;
+    const x=Math.cos(th)*8.6, z=Math.sin(th)*8.6;
+    // Tap-to-walk: a player who tapped a spot stands THERE instead of their
+    // ring slot, and glides to it in the render loop (no snapping).
+    const sx=(p.wx!=null)?p.wx:x, sz=(p.wz!=null)?p.wz:z;
+    const u=rk.g.userData;
+    u.ringSpot=true; u.ringX=x; u.ringZ=z; u.ringRy=Math.atan2(-sx,-sz);
+    u.walkTX=(p.wx!=null)?p.wx:null; u.walkTZ=(p.wz!=null)?p.wz:null;
+    if(u.lobbyX===0&&u.lobbyZ===-8.6){ u.lobbyX=sx; u.lobbyZ=sz; u.lobbyRy=u.ringRy; } // brand-new knight spawns at their spot
+    u.baseX=u.lobbyX; u.fightRy=u.ringRy; u.spotMix=0; u.spotRyMix=0; u.spotAnim=null; u.dispPos=0; u.dispAnim=null;
   });
   fighting.forEach(name=>{ const rk=ringKnights.get(name); if(rk) rk.g.visible=false; });
 }
+/* ---- Hats (clue-scroll accessories) worn over the helm ---- */
+function makeHat(accId){
+  const def=(window._accDefs||[]).find(a=>a.id===accId); const col=def?def.color:'#e3b93c';
+  const g=new THREE.Group();
+  const mat=new THREE.MeshStandardMaterial({color:col,roughness:.55,metalness:.15});
+  const add=(mesh,x,y,z)=>{ mesh.position.set(x,y,z); g.add(mesh); return mesh; };
+  if(accId==='crown'){
+    add(new THREE.Mesh(new THREE.CylinderGeometry(.21,.23,.17,8,1,true),new THREE.MeshStandardMaterial({color:0xe3b93c,roughness:.3,metalness:.85,side:THREE.DoubleSide})),0,.06,0);
+    for(let i=0;i<5;i++){ const a=i/5*Math.PI*2; add(new THREE.Mesh(new THREE.ConeGeometry(.045,.14,4),new THREE.MeshStandardMaterial({color:0xe3b93c,roughness:.3,metalness:.85})),Math.cos(a)*.2,.2,Math.sin(a)*.2); }
+    add(new THREE.Mesh(new THREE.SphereGeometry(.05,6,5),new THREE.MeshStandardMaterial({color:0xd92626,roughness:.3})),0,.05,.22);
+  } else if(accId==='tophat'){
+    add(new THREE.Mesh(new THREE.CylinderGeometry(.17,.17,.3,10),mat),0,.15,0);
+    add(new THREE.Mesh(new THREE.CylinderGeometry(.3,.3,.04,12),mat),0,.01,0);
+  } else { // party hats: a cheerful cone + pompom
+    add(new THREE.Mesh(new THREE.ConeGeometry(.17,.44,10),mat),0,.2,0);
+    add(new THREE.Mesh(new THREE.SphereGeometry(.06,6,5),new THREE.MeshStandardMaterial({color:0xf5ede0,roughness:.8})),0,.45,0);
+  }
+  g.position.set(0,.34,0);
+  return g;
+}
+function setHat(k,accId){
+  if(!k) return; const u=k.userData;
+  if(u.hatId===accId) return;
+  if(u.hat){ u.headG.remove(u.hat); u.hat=null; }
+  u.hatId=accId||null;
+  if(accId){ u.hat=makeHat(accId); u.headG.add(u.hat); }
+}
+/* ---- Pets: a small critter that trots along beside its owner's knight ---- */
+const petMap=new Map(); // ownerName -> {g, petId, phase}
+function makePet(petId){
+  const def=(window._petDefs||[]).find(p=>p.id===petId)||{color:'#a8763e',accent:'#6e4a24'};
+  const body=new THREE.MeshStandardMaterial({color:def.color,roughness:.8});
+  const acc=new THREE.MeshStandardMaterial({color:def.accent,roughness:.8});
+  const g=new THREE.Group();
+  const add=(mesh,x,y,z,parent)=>{ mesh.position.set(x,y,z); (parent||g).add(mesh); return mesh; };
+  if(petId==='parrot'){
+    add(new THREE.Mesh(new THREE.SphereGeometry(.24,8,6),body),0,.42,0).scale.set(.9,1.05,1.15);
+    add(new THREE.Mesh(new THREE.SphereGeometry(.16,8,6),body),0,.68,.14);
+    add(new THREE.Mesh(new THREE.ConeGeometry(.06,.16,5),new THREE.MeshStandardMaterial({color:0xe8a13a,roughness:.6})),0,.64,.3).rotation.x=Math.PI/2.3;
+    add(new THREE.Mesh(new THREE.BoxGeometry(.05,.34,.12),acc),0,.22,-.24).rotation.x=.5;
+    add(new THREE.Mesh(new THREE.BoxGeometry(.3,.05,.18),acc),-.2,.48,0).rotation.z=.4;
+  } else {
+    add(new THREE.Mesh(new THREE.SphereGeometry(.3,8,6),body),0,.36,0).scale.set(.95,.8,1.3);
+    add(new THREE.Mesh(new THREE.SphereGeometry(.21,8,6),body),0,.55,.3);
+    add(new THREE.Mesh(new THREE.BoxGeometry(.16,.1,.14),acc),0,.48,.48); // snout
+    const earGeo=new THREE.ConeGeometry(.07,.18,4);
+    add(new THREE.Mesh(earGeo,acc),-.11,.74,.28); add(new THREE.Mesh(earGeo,acc),.11,.74,.28);
+    const tail=add(new THREE.Mesh(new THREE.CylinderGeometry(.035,.02,.34,5),acc),0,.48,-.4); tail.rotation.x=-.8;
+    [[-.14,.16],[.14,.16],[-.14,-.18],[.14,-.18]].forEach(([lx,lz])=>add(new THREE.Mesh(new THREE.CylinderGeometry(.05,.045,.2,5),acc),lx,.1,lz));
+    if(petId==='dragon'){
+      const wingMat=new THREE.MeshStandardMaterial({color:def.accent,roughness:.6,side:THREE.DoubleSide});
+      const w1=add(new THREE.Mesh(new THREE.BoxGeometry(.5,.02,.3),wingMat),-.34,.62,-.05); w1.rotation.z=.5;
+      const w2=add(new THREE.Mesh(new THREE.BoxGeometry(.5,.02,.3),wingMat),.34,.62,-.05); w2.rotation.z=-.5;
+      add(new THREE.Mesh(new THREE.ConeGeometry(.05,.16,4),acc),-.1,.78,.3).rotation.x=-.3;
+      add(new THREE.Mesh(new THREE.ConeGeometry(.05,.16,4),acc),.1,.78,.3).rotation.x=-.3;
+    }
+    if(petId==='fox'){ const t=add(new THREE.Mesh(new THREE.CylinderGeometry(.07,.03,.44,5),new THREE.MeshStandardMaterial({color:def.color,roughness:.85})),0,.44,-.46); t.rotation.x=-.9; }
+  }
+  g.traverse(o=>{ o.castShadow=true; });
+  return g;
+}
+function petSync(){
+  if(!sceneReady) return;
+  const want=new Map();
+  (lastPlayers||[]).forEach(p=>{ if(p.pet) want.set(p.username,p.pet); });
+  for(const [name,entry] of [...petMap]){ if(want.get(name)!==entry.petId){ scene3.remove(entry.g); petMap.delete(name); } }
+  for(const [name,petId] of want){ if(!petMap.has(name)){ const g=makePet(petId); g.visible=false; scene3.add(g); petMap.set(name,{g,petId,phase:Math.random()*6}); } }
+}
+function accFor(name){ const p=(lastPlayers||[]).find(x=>x.username===name); return p?(p.accessory||null):null; }
 function miniKnight(colors,side){
   const k=makeKnight(colors); const u=k.userData;
   u.baseX=side*HOME_X; u.lobbyX=u.baseX; u.lobbyZ=0; u.lobbyRy=0; u.fightRy=side<0?Math.PI/2:-Math.PI/2;
