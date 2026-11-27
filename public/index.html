@@ -420,6 +420,7 @@ let ws=null, me=null, myOutfits=[], pendingAuth=null, duel=null, lockedMove=null
 let myCampaign=null, myTrophies=0, myCampaignRounds=[{botId:'pip',name:'Squire Pip',prize:10},{botId:'bram',name:'Hedge Knight Bram',prize:20},{botId:'mara',name:'Pit Dog Mara',prize:40},{botId:'champion',name:'Arena Champion',prize:100}], lastDuelCampaign=false;
 let lastPlayers=[], lastDuels=[], myQueues=new Map(), myCampaignBest=0, pendingPost=null, labelStamp=0, adEndsAt=null;
 let stageDuelId=null;
+let duelLive=false; // true from FIGHT! — stage knights follow server positions (run/chase)
 const activeDuels=new Map(), minis=new Map(), ringKnights=new Map();
 const COUNTER={attack:'defence',strength:'attack',defence:'strength'}; // the move that BEATS the key move
 const MOVE_META={attack:{icon:'🗡️',label:'ATTACK',color:'#ffb74d'},strength:{icon:'💪',label:'STRENGTH',color:'#ff7043'},defence:{icon:'🛡️',label:'DEFENCE',color:'#64b5f6'}};
@@ -475,7 +476,7 @@ $('btnFacebook').onclick=()=>{ ensureAudio(); window.location.assign('/auth/face
 })();
 connect();
 
-const WORD_COLORS={'SLASH!':'#ffb74d','SMASH!':'#ff5252','BLOCKED!':'#64b5f6','CLASH!':'#ce93d8','GUARDED':'#a5d6a7'};
+const WORD_COLORS={'SLASH!':'#ffb74d','SMASH!':'#ff5252','BLOCKED!':'#64b5f6','CLASH!':'#ce93d8','GUARDED':'#a5d6a7','MISS!':'#b0bec5'};
 function handle(m){
   if(m.type==='authErr'){ $('authErr').textContent=m.message; return; }
   if(m.type==='authOk'){
@@ -530,12 +531,15 @@ function handle(m){
     if(m.duelId!==stageDuelId) return;
     const c=$('countdown');
     if(m.n>0){ c.textContent=m.n; c.style.color='#fff'; }
-    else { c.textContent='FIGHT!'; c.style.color='#69f0ae'; setTimeout(()=>{ if($('countdown').textContent==='FIGHT!') $('countdown').textContent=''; },750); }
+    else { c.textContent='FIGHT!'; c.style.color='#69f0ae'; setTimeout(()=>{ if($('countdown').textContent==='FIGHT!') $('countdown').textContent=''; },750);
+      duelLive=true; // from here the server owns the fighters' feet (run/chase)
+      [knightA,knightB].forEach(k=>{ if(k){ k.userData.duelCur={x:k.position.x,z:k.position.z}; } });
+      if(duel && duel.mine && !window._moveHintShown){ window._moveHintShown=true; toast('🏃 Tap the ground to RUN — hits only land when you\'re side by side! Your fighter chases on his own.',4600); } }
     c.classList.remove('pop'); void c.offsetWidth; c.classList.add('pop');
     if(m.n>0) tone(440,440,.09,'square',.12);
     return;
   }
-  if(m.type==='duelTick'){ if(m.duelId!==stageDuelId) return; for(let i=1;i<=3;i++){ const s=$('t'+i); s.className=i<=m.tickInExchange?'on':''; if(i===3&&m.tickInExchange===3) s.classList.add('t3'); } return; }
+  if(m.type==='duelTick'){ if(m.duelId!==stageDuelId) return; for(let i=1;i<=3;i++){ const s=$('t'+i); s.className=i<=m.tickInExchange?'on':''; if(i===3&&m.tickInExchange===3) s.classList.add('t3'); } if(m.posA&&knightA) knightA.userData.duelPos={x:m.posA.x,z:m.posA.z}; if(m.posB&&knightB) knightB.userData.duelPos={x:m.posB.x,z:m.posB.z}; return; }
   if(m.type==='duelExchange'){
     const inf=activeDuels.get(m.duelId); if(inf){ inf.hpA=m.hpA; inf.hpB=m.hpB; }
     if(m.duelId!==stageDuelId){ const mn=minis.get(m.duelId); if(mn) miniExchange(mn,m); return; }
@@ -625,8 +629,9 @@ function stageDuel(info,fresh){
   $('btnForfeit').classList.toggle('hidden',!duel.mine);
   $('hpALabel').textContent=info.a; $('hpBLabel').textContent=info.b; $('ovNameA').textContent=info.a; $('ovNameB').textContent=info.b;
   setHp(info.hpA,info.hpB,true); $('winnerBanner').style.display='none'; $('winnerBanner').classList.remove('show'); $('wordBanner').textContent='';
-  if(knightA){ knightA.visible=true; setKnightColors(knightA,info.colorsA); setHat(knightA,accFor(info.a)); knightA.userData.playerName=info.a; }
-  if(knightB){ knightB.visible=true; setKnightColors(knightB,info.colorsB); setHat(knightB,accFor(info.b)); knightB.userData.playerName=info.b; }
+  if(knightA){ knightA.visible=true; setKnightColors(knightA,info.colorsA); setHat(knightA,accFor(info.a)); knightA.userData.playerName=info.a; knightA.userData.duelPos=info.posA?{x:info.posA.x,z:info.posA.z}:{x:-HOME_X,z:0}; knightA.userData.duelCur=null; }
+  if(knightB){ knightB.visible=true; setKnightColors(knightB,info.colorsB); setHat(knightB,accFor(info.b)); knightB.userData.playerName=info.b; knightB.userData.duelPos=info.posB?{x:info.posB.x,z:info.posB.z}:{x:HOME_X,z:0}; knightB.userData.duelCur=null; }
+  duelLive=false;
   plateNameA=info.a; plateNameB=info.b; refreshNameplates();
   resetKnightPose();
   if(fresh){
@@ -657,6 +662,7 @@ function promoteNext(){
   if(info) stageDuel(info,false);
 }
 function exchangeLine(m){
+  if(m.miss) return '💨 Too far apart — both swings whiffed! Hits only land side by side.';
   if(m.word==='GUARDED') return m.a+' and '+m.b+' both guarded — nothing lands.';
   if(m.word==='CLASH!') return 'Blades clash! Both fighters take '+m.aDmg+'.';
   const wName=m.winnerSide==='a'?m.a:m.b, lName=m.winnerSide==='a'?m.b:m.a;
@@ -1245,7 +1251,7 @@ function scheduleWalkForward(){
   setDisp(knightA,t.a,'walk'); setDisp(knightB,t.b,'walk');
 }
 window._reach=()=>{ if(!knightA||!knightB) return null; const a=knightA.userData,b=knightB.userData; return {home:HOME_X,xA:knightA.position.x,xB:knightB.position.x,gap:knightB.position.x-knightA.position.x,dispA:a.dispPos,dispB:b.dispPos,walkingA:!!(a.dispAnim&&a.dispAnim.kind==='walk'),walkingB:!!(b.dispAnim&&b.dispAnim.kind==='walk'),animA:a.dispAnim?a.dispAnim.kind:null,animB:b.dispAnim?b.dispAnim.kind:null}; };
-function resetKnightPose(){ [knightA,knightB].forEach(k=>{ if(!k) return; k.userData.anim={swing:null,knock:-1,knockDir:1,death:-1,deathT:0}; k.userData.dispPos=0; k.userData.dispAnim=null; applyGuardPose(k); clearTrail(k.userData); k.rotation.z=0; }); }
+function resetKnightPose(){ duelLive=false; [knightA,knightB].forEach(k=>{ if(!k) return; k.userData.anim={swing:null,knock:-1,knockDir:1,death:-1,deathT:0}; k.userData.dispPos=0; k.userData.dispAnim=null; k.userData.duelPos=null; k.userData.duelCur=null; k.userData.duelMoving=null; applyGuardPose(k); clearTrail(k.userData); k.rotation.z=0; }); }
 function startDeath(k){ if(!k) return; const an=k.userData.anim; an.death=0; an.deathT=0; an.swing=null; an.knock=-1; clearTrail(k.userData); }
 const TRAIL_MAX=16;
 function makeTrailMesh(){
@@ -1298,7 +1304,14 @@ function initScene(){
     if(!tapDown||e.pointerId!==tapDown.id) return;
     const moved=Math.hypot(e.clientX-tapDown.x,e.clientY-tapDown.y); tapDown=null;
     if(moved>10) return; // a drag is a camera move, not a tap — no time limit: slow phones process the two halves frames apart
-    if(duel&&duel.mine) return; // mid-fight taps are for fighting
+    if(duel&&duel.mine){ // mid-fight: a ground tap is a RUN order (hits only land side by side)
+      const r2=renderer.domElement.getBoundingClientRect();
+      const rcM=new THREE.Raycaster(); rcM.setFromCamera(new THREE.Vector2(((e.clientX-r2.left)/r2.width)*2-1,-((e.clientY-r2.top)/r2.height)*2+1),cam);
+      const o=rcM.ray.origin, d=rcM.ray.direction; if(d.y>=-0.02) return;
+      const s=-o.y/d.y; let gx=o.x+d.x*s, gz=o.z+d.z*s; const rr=Math.hypot(gx,gz); if(rr>4.6){ gx=gx/rr*4.6; gz=gz/rr*4.6; }
+      send({type:'duelRun',x:Math.round(gx*100)/100,z:Math.round(gz*100)/100});
+      return;
+    }
     if(!$('setupScreen').classList.contains('hidden')) return;
     const rect=renderer.domElement.getBoundingClientRect();
     // Tapped a knight? Offer the duel right there (ring knights + the pair fighting).
@@ -1444,6 +1457,8 @@ function initScene(){
       // --- tap-to-walk glide: a ring knight strolls to its tapped spot (or
       // back to its ring slot), legs stepping, then turns to face the pit ---
       if(u.ringSpot && u.spotMix===0){ const tx=u.walkTX!=null?u.walkTX:u.ringX, tz=u.walkTZ!=null?u.walkTZ:u.ringZ; if(tx!=null){ const dx=tx-u.lobbyX, dz=tz-u.lobbyZ, dist=Math.hypot(dx,dz); if(dist>.06){ const st=Math.min(dist,2.3*dt); u.lobbyX+=dx/dist*st; u.lobbyZ+=dz/dist*st; walking=true; u.walkPhase+=dt*11+.35; u.lobbyRy=Math.atan2(dx,dz); } else if(u.lobbyRy!==u.ringRy){ u.lobbyRy=u.ringRy; } } }
+      // --- duel run/chase: glide toward the server's position, legs stepping ---
+      if(u.duelPos && duelLive){ if(!u.duelCur) u.duelCur={x:k.position.x,z:k.position.z}; const dx=u.duelPos.x-u.duelCur.x, dz=u.duelPos.z-u.duelCur.z, dist=Math.hypot(dx,dz); if(dist>.04){ const st=Math.min(dist,3.1*dt); u.duelCur.x+=dx/dist*st; u.duelCur.z+=dz/dist*st; walking=true; u.walkPhase+=dt*11+.35; u.duelMoving={x:dx/dist,z:dz/dist}; } else u.duelMoving=null; }
       const bobY=(Math.abs(Math.sin(t*2.4+idx*1.7))*.05*(an.swing?.35:1)+(walking?Math.abs(Math.sin(u.walkPhase))*(u.bobAmp||.07):0))*(1-deathE);
       u.shR.rotation.set(_pose.shX,0,_pose.shZ); u.elR.rotation.x=_pose.elX; u.wrR.rotation.x=_pose.wrX;
       u.shL.rotation.x=-.4-_pose.shield*.85; u.elL.rotation.x=-.55-_pose.shield*.3;
@@ -1462,6 +1477,10 @@ function initScene(){
       k.position.x=homeX-u.facing*u.dispPos+u.facing*_pose.lunge+kx;
       k.position.y=bobY-_pose.crouch-.55*deathE;
       k.position.z=u.lobbyZ*(1-u.spotMix)+Math.sin(u.spotMix*Math.PI)*(u.pathBend||0); k.rotation.y=u.lobbyRy+(u.fightRy-u.lobbyRy)*(u.spotRyMix!=null?u.spotRyMix:u.spotMix); k.rotation.z=tilt*(1-deathE);
+      // --- duel positions own the feet: place on the server's spot, face the
+      // chase while apart and the opponent when close ---
+      if(u.duelPos && duelLive && u.duelCur){ k.position.x=u.duelCur.x+u.facing*_pose.lunge+kx; k.position.z=u.duelCur.z;
+        const opp=(k===knightA?knightB:knightA); if(opp){ const ox=opp.position.x-k.position.x, oz=opp.position.z-k.position.z, sep=Math.hypot(ox,oz); let want; if(u.duelMoving&&sep>3.45) want=Math.atan2(u.duelMoving.x,u.duelMoving.z); else want=Math.atan2(ox,oz); let dd=want-k.rotation.y; while(dd>Math.PI)dd-=2*Math.PI; while(dd<-Math.PI)dd+=2*Math.PI; k.rotation.y+=dd*Math.min(1,dt*10); } }
       updateTrail(u,dt);
       if(u.blob){ u.blob.position.x=k.position.x; u.blob.position.z=k.position.z; const bs=1+Math.abs(kx)*.25+_pose.crouch*.4; u.blob.scale.set(bs,bs,1); }
     });
@@ -1514,12 +1533,18 @@ function syncDispAndWalk(m,impactDelay){
   // 1-second cycle — walk forward back into reach before the next swing.
   setTimeout(()=>{
     if(!duel||duel.id!==m.duelId) return;
+    if(m.posA&&knightA){ knightA.userData.duelPos={x:m.posA.x,z:m.posA.z}; knightB.userData.duelPos={x:m.posB.x,z:m.posB.z}; return; } // positions own the feet now
     if(typeof m.dispA==='number') setDisp(knightA,m.dispA,'kb');
     if(typeof m.dispB==='number') setDisp(knightB,m.dispB,'kb');
     setTimeout(()=>{ if(duel&&duel.id===m.duelId) scheduleWalkForward(); },260);
   },Math.round(impactDelay));
 }
 function animateExchange(m){
+  if(m.miss){ // too far apart: both swing at air, nobody's touched
+    actMove(knightA,m.moveA); actMove(knightB,m.moveB);
+    if(m.posA&&knightA){ knightA.userData.duelPos={x:m.posA.x,z:m.posA.z}; knightB.userData.duelPos={x:m.posB.x,z:m.posB.z}; }
+    return;
+  }
   const aWon=m.winnerSide==='a';
   const moveA=m.moveA, moveB=m.moveB;
   if(m.winnerSide==='clash'){
