@@ -139,8 +139,8 @@ function resolveExchange(a, b) {
 const HOME_GAP = 3.1;   // stance: knights at x ±1.55
 const REACH_GAP = 3.4;  // can hit while gap <= this
 const PIT_R = 4.6;      // duel movement stays inside this radius
-const RUN_WALK = 2.7;   // units/second toward a fresh tap target — a touch faster…
-const CHASE_WALK = 2.25; // …than the auto-chase, so a clean run really opens distance and whiffs land
+const RUN_WALK = 2.9;   // units/second toward a fresh tap target — clearly faster…
+const CHASE_WALK = 2.1; // …than the auto-chase, so running away opens real distance and swings whiff
 function clampPit(p) { const rr = Math.hypot(p.x, p.z); if (rr > PIT_R) { p.x = Math.round(p.x / rr * PIT_R * 1000) / 1000; p.z = Math.round(p.z / rr * PIT_R * 1000) / 1000; } }
 function pushFrom(p, from, amt) { let dx = p.x - from.x, dz = p.z - from.z; let d = Math.hypot(dx, dz); if (d < 0.001) { dx = p.x >= 0 ? 1 : -1; dz = 0; d = 1; } p.x = Math.round((p.x + dx / d * amt) * 1000) / 1000; p.z = Math.round((p.z + dz / d * amt) * 1000) / 1000; clampPit(p); }
 // Duel movement (Derek, 2026-11-26): a fighter with a fresh tap target runs
@@ -1027,7 +1027,7 @@ wss.on('connection', ws => {
         let x = Number(m.x), z = Number(m.z);
         if (isFinite(x) && isFinite(z)) {
           const rr = Math.hypot(x, z); if (rr > PIT_R) { x = x / rr * PIT_R; z = z / rr * PIT_R; }
-          d.mt[d.a === me ? 'a' : 'b'] = { x: Math.round(x * 1000) / 1000, z: Math.round(z * 1000) / 1000, until: Date.now() + 2600 };
+          d.mt[d.a === me ? 'a' : 'b'] = { x: Math.round(x * 1000) / 1000, z: Math.round(z * 1000) / 1000, until: Date.now() + 4000 };
         }
       }
       return;
