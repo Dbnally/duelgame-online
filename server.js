@@ -261,6 +261,7 @@ function ensureFields(u) {
   if (typeof u.bestStreak !== 'number') u.bestStreak = 0;
   if (typeof u.bankGold !== 'number') u.bankGold = 0;
   if (!Array.isArray(u.bankItems)) u.bankItems = [];
+  if (!Array.isArray(u.lastFights)) u.lastFights = []; // recent form, newest first: 'W'/'L', max 5
   if (!Array.isArray(u.petsOwned)) u.petsOwned = [];
   if (!('pet' in u)) u.pet = null;
   if (!Array.isArray(u.accOwned)) u.accOwned = [];
@@ -518,6 +519,22 @@ function deliverQueued(name) {
   }
   if (!q.length) challengeQueue.delete(name);
 }
+// ---------- Quick match: offer a free player; if nobody bites in 10s, a bot
+// steps in (honest backfill — the player is told, never left hanging). ------
+const quickTimers = new Map(); // username -> timeout id
+function clearQuick(name) { const t = quickTimers.get(name); if (t) { clearTimeout(t); quickTimers.delete(name); } }
+function quickBackfill(name) {
+  quickTimers.delete(name);
+  const c = clients.get(name); const u = db.users[name];
+  if (!c || !u || c.duelId) return;
+  for (const [t, p] of pending) if (p.from === name) pending.delete(t); // withdraw my unanswered offer
+  const free = BOTS.filter(b => !botState[b.id].duelId && u.gold >= b.stake);
+  const bot = free.length ? free[Math.floor(Math.random() * free.length)] : null;
+  if (!bot) { send(c.ws, { type: 'error', message: 'No players free and every bot is busy or beyond your gold — try again in a moment.' }); return; }
+  send(c.ws, { type: 'quickMatchBot', bot: bot.name });
+  if (bot.id === 'pip' && !u.practiced) { u.practiced = true; saveDb(); startDuel(name, bot.name, bot.stake, { practice: true }); return; }
+  startDuel(name, bot.name, bot.stake);
+}
 const AD_GOLD_AMOUNT = 10, AD_GOLD_DAILY_CAP = 5, AD_WATCH_MS = 30000;
 function adDayStr() { return new Date().toLocaleDateString('en-CA', { timeZone: 'America/Indiana/Indianapolis' }); }
 function adClaimsLeft(u) { return u.adDay === adDayStr() ? Math.max(0, AD_GOLD_DAILY_CAP - (u.adClaims || 0)) : AD_GOLD_DAILY_CAP; }
@@ -526,13 +543,14 @@ function personalState(name) {
   ensureFields(u);
   enforceNetGear(u);
   const c = clients.get(name);
-  send(c && c.ws, { type: 'state', gold: u.gold, wins: u.wins, losses: u.losses, owned: u.owned, outfit: u.outfit, trophies: u.trophies || 0, fights: u.fights || 0, adBreakPending: !!u.adBreakPending, adClaimsLeft: adClaimsLeft(u), adGoldAmount: AD_GOLD_AMOUNT, campaign: campaignOf(u), practiced: !!u.practiced, campaignBest: u.campaignBest || 0, queuedOut: queuedOutFor(name), streak: u.streak || 0, bestStreak: u.bestStreak || 0, scores: highscores(), bankGold: u.bankGold || 0, bankItems: u.bankItems || [], petsOwned: u.petsOwned || [], pet: u.pet || null, accOwned: u.accOwned || [], accessory: u.accessory || null, scrolls: u.scrolls || 0, exploreStep: u.exploreStep || 0, exploreDone: !!u.exploreDone });
+  send(c && c.ws, { type: 'state', gold: u.gold, wins: u.wins, losses: u.losses, owned: u.owned, outfit: u.outfit, trophies: u.trophies || 0, fights: u.fights || 0, adBreakPending: !!u.adBreakPending, adClaimsLeft: adClaimsLeft(u), adGoldAmount: AD_GOLD_AMOUNT, campaign: campaignOf(u), practiced: !!u.practiced, campaignBest: u.campaignBest || 0, queuedOut: queuedOutFor(name), streak: u.streak || 0, bestStreak: u.bestStreak || 0, scores: highscores(), bankGold: u.bankGold || 0, bankItems: u.bankItems || [], petsOwned: u.petsOwned || [], pet: u.pet || null, accOwned: u.accOwned || [], accessory: u.accessory || null, scrolls: u.scrolls || 0, exploreStep: u.exploreStep || 0, exploreDone: !!u.exploreDone, lastFights: u.lastFights || [] });
 }
 function sysChat(text) { broadcast({ type: 'chat', from: '⚔️ Duelgame', text, kind: 'system' }); }
 
 // ---------- Duels ----------
 function startDuel(nameA, nameB, stake, opts) {
   opts = opts || {};
+  clearQuick(nameA); clearQuick(nameB); // a started duel cancels any quick-match backfill
   const isCampaign = !!opts.campaign;
   const isPractice = !!opts.practice;
   const isExplore = !!opts.explore;
@@ -711,8 +729,8 @@ function settleDuel(duel, winnerName, reason) {
   // Win streaks (setup-screen highscores): winner's streak grows, loser's resets.
   if (!duel.practice) {
     const wu = db.users[winnerName], lu = db.users[loserName];
-    if (wu) { ensureFields(wu); wu.streak = (wu.streak || 0) + 1; wu.bestStreak = Math.max(wu.bestStreak || 0, wu.streak); }
-    if (lu) { ensureFields(lu); lu.streak = 0; }
+    if (wu) { ensureFields(wu); wu.streak = (wu.streak || 0) + 1; wu.bestStreak = Math.max(wu.bestStreak || 0, wu.streak); wu.lastFights.unshift('W'); wu.lastFights = wu.lastFights.slice(0, 5); }
+    if (lu) { ensureFields(lu); lu.streak = 0; lu.lastFights.unshift('L'); lu.lastFights = lu.lastFights.slice(0, 5); }
   }
   // Net-gear rule: a loss can drop a fighter's net score below their armour's
   // requirement — that armour is lost and must be rebought when re-earned.
@@ -751,7 +769,7 @@ wss.on('connection', ws => {
     if (clients.has(name)) { const old = clients.get(name); try { old.ws.close(); } catch {} }
     clients.set(name, { ws, duelId: null });
     const u = ensureFields(db.users[name]);
-    send(ws, { type: 'authOk', username: name, gold: u.gold, wins: u.wins, losses: u.losses, owned: u.owned, outfit: u.outfit, outfits: OUTFITS, bots: BOTS, players: playerList(), trophies: u.trophies || 0, fights: u.fights || 0, adBreakPending: !!u.adBreakPending, adClaimsLeft: adClaimsLeft(u), adGoldAmount: AD_GOLD_AMOUNT, campaign: campaignOf(u), campaignRounds: campaignInfo(), practiced: !!u.practiced, campaignBest: u.campaignBest || 0, queuedOut: queuedOutFor(name), pets: PETS, accessories: ACCESSORIES, streak: u.streak || 0, bestStreak: u.bestStreak || 0, scores: highscores(), bankGold: u.bankGold || 0, bankItems: u.bankItems || [], petsOwned: u.petsOwned || [], pet: u.pet || null, accOwned: u.accOwned || [], accessory: u.accessory || null, scrolls: u.scrolls || 0, exploreStep: u.exploreStep || 0, exploreDone: !!u.exploreDone });
+    send(ws, { type: 'authOk', username: name, gold: u.gold, wins: u.wins, losses: u.losses, owned: u.owned, outfit: u.outfit, outfits: OUTFITS, bots: BOTS, players: playerList(), trophies: u.trophies || 0, fights: u.fights || 0, adBreakPending: !!u.adBreakPending, adClaimsLeft: adClaimsLeft(u), adGoldAmount: AD_GOLD_AMOUNT, campaign: campaignOf(u), campaignRounds: campaignInfo(), practiced: !!u.practiced, campaignBest: u.campaignBest || 0, queuedOut: queuedOutFor(name), pets: PETS, accessories: ACCESSORIES, streak: u.streak || 0, bestStreak: u.bestStreak || 0, scores: highscores(), bankGold: u.bankGold || 0, bankItems: u.bankItems || [], petsOwned: u.petsOwned || [], pet: u.pet || null, accOwned: u.accOwned || [], accessory: u.accessory || null, scrolls: u.scrolls || 0, exploreStep: u.exploreStep || 0, exploreDone: !!u.exploreDone, lastFights: u.lastFights || [] });
     setTimeout(() => deliverQueued(name), 600); // an offer queued while they were away lands once they're in
     broadcastPlayers();
     sysChat(`${name} entered the lobby.`);
@@ -963,7 +981,27 @@ wss.on('connection', ws => {
       if (reward.kind !== 'gold') sysChat(`⭐ ${me} opened a reward scroll and found: ${reward.name}!`);
       return;
     }
+    if (m.type === 'quickMatch') {
+      const stake = Number(m.stake);
+      if (myClient.duelId) return send(ws, { type: 'error', message: 'You are already in a duel.' });
+      if (!STAKES.includes(stake)) return send(ws, { type: 'error', message: 'Pick a valid stake.' });
+      if (myUser.gold < stake) return send(ws, { type: 'error', message: "You can't afford that stake." });
+      clearQuick(me);
+      const freeHumans = [];
+      for (const [n, c] of clients) { if (n !== me && !c.duelId) { const ou = db.users[n]; if (ou && ou.gold >= stake && !pending.has(n)) freeHumans.push(n); } }
+      if (freeHumans.length) {
+        const target = freeHumans[Math.floor(Math.random() * freeHumans.length)];
+        pending.set(target, { from: me, stake, expires: Date.now() + 30000 });
+        send(clients.get(target).ws, { type: 'challengeIncoming', from: me, stake });
+        send(ws, { type: 'quickMatchSent', target, stake });
+      } else {
+        send(ws, { type: 'quickMatchWait' });
+      }
+      quickTimers.set(me, setTimeout(() => quickBackfill(me), 10000));
+      return;
+    }
     if (m.type === 'challenge') {
+      clearQuick(me); // a hand-picked challenge replaces any quick match
       const target = String(m.target || '');
       const stake = Number(m.stake);
       if (myClient.duelId) return send(ws, { type: 'error', message: 'You are already in a duel.' });
@@ -1087,6 +1125,7 @@ wss.on('connection', ws => {
     const c = clients.get(me);
     clients.delete(me);
     pending.delete(me);
+    clearQuick(me);
     challengeQueue.delete(me);
     for (const [t, q] of challengeQueue) { const kept = q.filter(e => e.from !== me); if (kept.length) challengeQueue.set(t, kept); else challengeQueue.delete(t); }
     if (c && c.duelId) {
