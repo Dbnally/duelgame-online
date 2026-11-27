@@ -166,6 +166,14 @@ function stepDuelMovement(duel) {
     mp.z = Math.round((mp.z + dz / d * st) * 1000) / 1000;
     clampPit(mp);
   }
+  // While either fighter is under a run order, remember the widest gap this
+  // exchange cycle — a swing that started out of reach whiffs, even if the
+  // chase corners back into range before the exchange lands.
+  const nowT = Date.now();
+  if ((duel.mt.a && nowT < duel.mt.a.until) || (duel.mt.b && nowT < duel.mt.b.until)) {
+    const sep = Math.hypot(P.a.x - P.b.x, P.a.z - P.b.z);
+    if (sep > (duel.maxSep || 0)) duel.maxSep = sep;
+  }
 }
 const knockbackFor = dmg => dmg <= 0 ? 0 : Math.round((0.25 + 0.16 * dmg) * 1000) / 1000;
 // Walk-forward model (mirrored by the client): during a cycle, displaced fighters
@@ -660,7 +668,8 @@ function startDuel(nameA, nameB, stake, opts) {
     // Derek's range rule (2026-11-26): hits only count side by side. If the
     // pair has separated past reach — somebody ran — both swings whiff.
     const sepNow = Math.hypot(duel.pos.a.x - duel.pos.b.x, duel.pos.a.z - duel.pos.b.z);
-    const missed = sepNow > REACH_GAP;
+    const missed = Math.max(sepNow, duel.maxSep || 0) > REACH_GAP;
+    duel.maxSep = 0;
     if (missed) { r.aDmg = 0; r.bDmg = 0; r.word = 'MISS!'; r.winner = null; }
     // Riposte: GUARDED arms +1 for the NEXT exchange's winner; any other
     // exchange spends it. Anti-turtle: a 3rd straight Defence blocks for 0.
